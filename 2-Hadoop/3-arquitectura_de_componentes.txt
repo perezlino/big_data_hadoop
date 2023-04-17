@@ -1,0 +1,109 @@
+ARQUITECTURA DE COMPONENTES
+===========================
+
+==> Hadoop tiene 4 modulos importantes:
+
+             ____________________________
+            |          |    MAP REDUCE   |       HDFS : Almacena los datos en el Cluster
+            |   HDFS   |_________________|
+            |          |       YARN      |       MAP REDUCE : Motor de Procesamiento (Ya no se utiliza).
+            |__________|_________________|                    Es el motor que viene por defecto cuando
+            |                            |                    instalamos Hadoop. En su defecto, podemos 
+            |       HADOOP CORE          |                    agregar un motor de procesamiento que es 
+            |____________________________|                    mas utilizado como SPARK. No es que SPARK
+                                                              vaya a reemplazar a MAP REDUCE, sino, se                                                 
+                                                              utilizan para diferentes ocasiones. Por 
+                                                              ejemplo, SPARK es 100 veces mas rapido que
+                                                              MAP REDUCE. Pero, SPARK puede llegar a 
+                                                              consumir 10 veces mas potencia computacional
+                                                              que MAP REDUCE.
+
+                                                YARN : Gestiona los recursos del Cluster              
+
+                                                HADOOP CORE : Utilitarios para el resto de modulos 
+
+HDFS
+----
+
+Es el Sistema de archivos distribuidos de Hadoop. Se enfoca
+en la informacion que se encuentra en 'Disco Duro' del Cluster.
+Nos permite ver los discos de duros de diferentes servidores,
+como si fuese 'un unico gran disco duro'.
+
+==> HDFS nos permite gestionar los Discos Duros.
+
+MAP REDUCE
+----------
+
+Ya no se utiliza mucho. Para procesos ETL podemos usarlos, pero
+para otro tipo de procesos ya no se recomienda.
+
+YARN (YET ANOTHER RESOURCE NEGOCIATOR)
+--------------------------------------
+
+Es el gestor de recursos. Recordar que Cluster no solo tiene 'Disco 
+duro' como recurso computacional, si no, tambien tiene 'Memoria RAM'
+y 'CPU'. ¿Quien se encarga de administrar la 'Memoria RAM' y 'CPU'?
+Eso lo administra HADOOP, pero especificamente el modulo 'YARN'.
+
+==> YARN nos permite gestionar la Memoria RAM y CPU.
+
+
+HADOOP CORE
+-----------
+
+Utilitarios de Hadoop.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+HADOOP ES MODULAR
+=================
+
+Hadoop es un 'Ecosistema Modular' y esto quiere decir que cada componente
+es reemplazable con uno u otro modulo de otra tecnologia.
+
+Por ejemplo:
+
+- MAP REDUCE es complejo, por tanto, podemos reemplazarlo por SPARK
+             ____________________________
+            |          |      SPARK      | <-------
+            |   HDFS   |_________________|
+            |          |       YARN      |
+            |__________|_________________|
+            |                            |   
+            |       HADOOP CORE          |   
+            |____________________________|
+
+- YARN no es el unico gestor de recursos de RAM y CPU, existe otro 
+  utilizado llamado MESOS
+             ____________________________
+            |          |      SPARK      |
+            |   HDFS   |_________________|
+            |          |      MESOS      | <-------
+            |__________|_________________|
+            |                            |   
+            |       HADOOP CORE          |   
+            |____________________________|
+
+- HDFS puede ser reemplazado por DBFS (Databricks File System)
+             ____________________________
+            |          |      SPARK      |
+    ------> |   DBFS   |_________________|
+            |          |      MESOS      |
+            |__________|_________________|
+            |                            |   
+            |       HADOOP CORE          |   
+            |____________________________|
+
+- Y si estamos en la nube, Amazon tiene su propio sistema de archivos conocido
+  como S3. 
+             ____________________________
+            |          |      SPARK      |
+    ------> |    S3    |_________________|
+            |          |      MESOS      |
+            |__________|_________________|
+            |                            |   
+            |       HADOOP CORE          |   
+            |____________________________|
+
+---------------------------------------------------------------------------------------------------------------- 

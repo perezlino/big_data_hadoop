@@ -1,0 +1,155 @@
+¿QUE ES TRABAJAR DE MANERA DISTRIBUIDA?
+=======================================
+
+Significa trabajar sobre un clúster. Un clúster es una agrupación de servidores (computadoras) 
+conectadas sobre una red generalmente LAN.
+
+   ______________                                                       ___                     _____________________________
+  |______________|                                                     |   |                   |  ____   ____   ____   ____  | 
+   ______________         __                                __         |   |     _________     | |  ○ | |  ○ | |  ○ | |  ○ | |
+  |______________|     __|  |__      ______________      __|  |__      |   |    |_________|    | |____| |____| |____| |____| |
+   ______________     |__    __|    |______________|    |__    __|     |   |     _________     |  ____   ____   ____   ____  |
+  |______________|       |__|                              |__|        |   |    |_________|    | |  ○ | |  ○ | |  ○ | |  ○ | |
+   ______________                        Switch                        |   |                   | |____| |____| |____| |________   ____   ____   ____| |
+  |______________|                                                     |___|                   |  ____   ____   ____   ____  |
+                                                                                               | |  ○ | |  ○ | |  ○ | |  ○ | | 
+      Servidores                                                        Rack                   | |____| |____| |____| |____| |
+(o nodos del Cluster)                                                                          |_____________________________| 
+
+                                                                                                            Cluster
+
+---------------------------------------------------------------------------------------------------------------- 
+
+UN CLUSTER HADOOP
+=================
+
+Por lo general un clúster Hadoop está conformado por al menos un nodo llamado "MASTER" y 
+tres o más nodos llamados "ESCLAVOS". El nodo "MASTER" es el que recibe peticiones de 
+almacenamiento o procesamiento desde algún cliente y delega el trabajo a los nodos "SLAVE".
+
+                                                                                         ____   ____   ____   ____
+                                                                                        |  ○ | |  ○ | |  ○ | |  ○ |
+ _____________                                                .---------------------->  |____| |____| |____| |____| 
+|             |               ______________                  |                          ____   ____   ____   ____
+|             | ---------->  |______________| ----------------|                         |  ○ | |  ○ | |  ○ | |  ○ |
+|_____________|                                               '---------------------->  |____| |____| |____| |____|             
+     _| |_                      NODO MASTER                                              ____   ____   ____   ____                
+                                                             El "master" recibe la      |  ○ | |  ○ | |  ○ | |  ○ |
+    CLIENTE                  El cliente envía quiere         tarea, selecciona los      |____| |____| |____| |____|
+                             procesar una tarea y la         "slave" desocupados y
+                             envía al master                 les ordena ejecutar la             NODOS SLAVE
+                                                             tarea      
+                                                                                    Los “slaves” ejecutan las tareas, a
+                                                                                    finalizar le informan al “master”
+
+---------------------------------------------------------------------------------------------------------------- 
+
+HDFS: ALMACENAMIENTO
+====================
+
+En Hadoop el módulo que se encarga del almacenamiento y manipulación de archivos es 
+conocido como HDFS (Hadoop Distribuited File System). Es módulo se encarga de recibir desde 
+un cliente peticiones de lectura y escritura de archivos y almacenar los archivos en los nodos 
+"Slave".
+                                                                   
+         El cliente envía el archivo                    ___
+             que quiere guardar                        |---|              ____   ____   ____   ____
+                    ___                        .------ |___| ------->    |  ○ | |  ○ | |  ○ | |  ○ |
+ _____________     |---|                       |        ___              |____| |____| |____| |____| 
+|             |    |___|      ______________   |       |---|              ____   ____   ____   ____
+|             | ---------->  |______________|--|------ |___| ------->    |  ○ | |  ○ | |  ○ | |  ○ |
+|_____________|                                |        ___              |____| |____| |____| |____|             
+     _| |_                      NODO MASTER    |       |---|              ____   ____   ____   ____                
+                                               '-------|___| ------->    |  ○ | |  ○ | |  ○ | |  ○ |
+    CLIENTE                  El "master" busca 3 nodos                   |____| |____| |____| |____|
+                             con espacio disponible en el         
+                             disco duro, y guarda el archivo                     NODOS SLAVE
+                             en cada uno de ellos. El MASTER
+                             ALMACENA METADATA                            Los "slaves" almacenan las           
+                                                                            copias de los archivos
+
+---------------------------------------------------------------------------------------------------------------- 
+
+YARN + MAPREDUCE: PROCESAMIENTO
+===============================
+
+En Hadoop los módulos que se encargan del procesamiento de archivos son YARN (Yet Another
+Resource Negotiator) y MapReduce. El módulo de YARN verifica los nodos "slave" que están 
+libres y los selecciona para el procesamiento. El módulo MapReduce ejecuta el procesamiento.
+
+         El cliente envía el programa                   ___
+             que quiere ejecutar                       |Jar|              ____   ____   ____   ____
+                    ___                        .------ |___| ------->    |  ○ | |  ○ | |  ○ | |  ○ |
+ _____________     |Jar|                       |        ___              |____| |____| |____| |____| 
+|             |    |___|      ______________   |       |Jar|              ____   ____   ____   ____
+|             | ---------->  |______________|--|------ |___| ------->    |  ○ | |  ○ | |  ○ | |  ○ |
+|_____________|                                |        ___              |____| |____| |____| |____|             
+     _| |_                      NODO MASTER    |       |Jar|              ____   ____   ____   ____                
+                                               '-------|___| ------->    |  ○ | |  ○ | |  ○ | |  ○ |
+    CLIENTE                  El "master" por medio de                    |____| |____| |____| |____|
+                             YARN busca que nodos no         
+                             están ejecutando nada y                              NODOS SLAVE
+                             separa recursos
+                             (memoria RAM y CPUs).                        Los "slave" ejecutan el programa en
+                                                                          paralelo por medio de MapReduce
+                                                                        
+----------------------------------------------------------------------------------------------------------------                                                                                    
+
+¿Por qué Hadoop almacena tres copias de un mismo archivo?
+=========================================================
+
+Hadoop almacena tres copias del mismo archivo por dos razones:
+
+1.- Si uno de los nodos “cae” (por ejemplo el disco duro se malogra), aún tenemos dos copias en 
+    otros dos nodos y no perdemos los datos. La data aún es accesible por las otras dos copias. 
+    Es más el clúster creará una nueva copia del archivo en otro nodo para mantener las tres copias.
+
+2.- Si sólo hubiera una copia, el resto de nodos que procesará el archivo debería recibir una copia 
+    de este antes de procesarlo, esto significa un tiempo de transferencia de archivo en la red LAN.    
+    Si el archivo pesa 10TB y la red tiene una velocidad de transferencia de 1GBPS, entonces sólo la 
+    transferencia previa al procesamiento demoraría 20000 segundos (5 horas y media)
+
+----------------------------------------------------------------------------------------------------------------  
+
+LA CAPACIDAD FISICA DE UN CLUSTER
+=================================
+
+La capacidad física de un clúster está definida por la suma de los recursos computacionales que 
+posea cada uno de sus nodos. Los recursos computacionales son la memoria RAM, la cantidad de discos 
+duros, la capacidad de cada disco duro y el número de CPUs. La siguiente tabla muestra el cálculo 
+de la capacidad física de un clúster según sus nodos.
+
+==> Importante: Los servidores "Getway" y "Master" NO SE CONTABILIZAN en la potencia computacional 
+                de un Cluster.
+
+ _______________________________________________________________________________________
+|           |   NUMEROS DE   | CAPACIDAD POR |  ESPACIO TOTAL  |            |  NUMEROS  |
+|    NODO   |  DISCOS DUROS  |   DISCO (TB)  |      (GB)       |  RAM (GB)  |  DE CPUS  | 
+|___________|________________|_______________|_________________|____________|___________| 
+|     1     |       10       |      1 TB     |      10 TB      |   128 GB   |     8     |
+|     2     |       12       |      1 TB     |      12 TB      |   128 GB   |     8     | 
+|     3     |        4       |      4 TB     |      16 TB      |   128 GB   |    16     | 
+|     4     |        4       |      4 TB     |      16 TB      |   256 GB   |     8     | 
+|     5     |        5       |      2 TB     |      10 TB      |    64 GB   |     4     | 
+|     6     |        7       |      2 TB     |      14 TB      |    64 GB   |     8     | 
+|     7     |        9       |      1 TB     |       9 TB      |   128 GB   |    16     | 
+|     8     |       10       |      1 TB     |      10 TB      |    64 GB   |     4     | 
+|___________|________________|_______________|_________________|____________|___________|      
+|                                            |                 |            |           | 
+|                   CLUSTER                  |      97 TB      |   960 GB   |    72     |      
+|____________________________________________|_________________|____________|___________|
+
+==> Si el nodo 1 y nodo 2 correspondieran al nodo 'Getway' y 'Master' respectivamente, deberiamos
+    descontar su pontencial computacional al total mostrado en la Tabla. El 'Espacio Total' ya no
+    serian 97 TB, si no, 75 TB. De 'RAM' serian 704 GB y de CPU serian 56.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+¿Por qué Hadoop está hecho sobre Java?
+======================================
+
+Hadoop está implementado sobre Java ya que este lenguaje de programación es perfecto para ejecutar 
+programas que utilicen grandes cantidades de recursos computacionales. Java está optimizado para ejecutar 
+programas que requieran de cientos de gigas de memoria RAM.
+
+---------------------------------------------------------------------------------------------------------------- 

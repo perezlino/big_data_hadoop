@@ -1,0 +1,11 @@
+CREACION DE SCRIPTS
+===================
+
+En la vida real como minimo vamos a tener 2 scripts separados. El primero de ellos es el que crea
+las estructuras de carpetas y sube los archivos que vamos a procesar. El segundo es el que
+implementa los permisos.
+
+¿ Por qué en 2 scripts separados?
+
+El primero puede ejecutarlo cualquier persona. Pero el segundo solamente lo va aejecutar el
+super-usuario hdfs.

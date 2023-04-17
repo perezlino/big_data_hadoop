@@ -1,0 +1,343 @@
+CONCEPTO BIG DATA
+=================
+
+Es un 'marco de trabajo' (conceptos + tecnologías) que permite 
+procesar grandes volúmenes de datos, de diferentes estructuras o 
+con carencia de estas, que pueden variar en el tiempo, a grandes 
+velocidades que generen valor al negocio.  
+
+MARCO DE TRABAJO
+----------------                                      (Al momento de procesar la data hay 3 etapas)
+                                                                       _______ 
+                                                                   ___| Input |
+                                                                  |   |-------|
+                                               _________          |    ____________     (Alguno de estos tres debe estar 
+                                              |         |         |___| Intermedio |     en el orden de los GigaBytes)
+                                         _____|  BATCH  |---------|   |------------|  
+ ________________________________       |     |_________|         |    ________
+|                                |      |                         |___| Output |  
+|   GRANDES VOLUMENES DE DATOS   |------|      _____________          |--------|     
+|________________________________|      |     |             | 
+                                        |_____|  REAL TIME  |  (Si estamos en 'Tiempo real' tendriamos que ver cuanto 
+                                              |_____________|   pesa el registro que se genera en tiempo real y 
+                                                                multiplicarlo por el numero de transacciones por segundo 
+                                                                que se ejecuten. Para colocarlo en contexto, Facebook, 
+                                                                cada comentario pesa 1kb y pensemos que se generan 100.000 
+                                                                comentarios por segundo, eso aproximadamente son 100 GB, 
+                                                                por tanto, estamos trabajando en el orden de los GigaBytes)
+
+==> Los procesos BATCH utilizan cierta RAM y cierta CPU. Tienen una hora de comienzo y de termino. Por tanto al momento
+    de finalizar el proceso BATCH, inmediatamente liberan los recursos asignados.
+
+==> Los procesos en TIEMPO REAL utilizan cierta RAM y cierta CPU, "PERO DE MANERA PERMANENTE". Es decir, si nosotros al   
+    un proceso de tiempo real le hemos asignado 20 GB y 4 CPU's, el proceso de tiempo real va a tener separado estos
+    recursos asignados de manera permanente, nunca los va a liberar. Es decir, lo reserva solo para este proceso.
+
+ _________________________
+|                         |  
+|   DATOS ESTRUCTURADOS   |                                                                
+|_________________________| 
+                                                    ______________________
+                                                   |                      |  
+                                               ____|  Semi-Estructurados  | 
+ ______________________________________       |    |______________________| 
+|                                      |      |  
+|   DATOS CON CARENCIA DE ESTRUCTURA   |------|     ____________________    
+|______________________________________|      |    |                    |
+                                              |____|  No-Estructurados  |    
+                                                   |____________________|
+
+
+==> Si estamos frente a un caso de procesamiento BATCH y ESTRUCTURADO la mejor herramienta para ello es HIVE
+
+==> Si estamos frente a un caso de procesamiento en TIEMPO REAL y SEMI-ESTRUCTURADO la mejor herramienta para 
+    ello es SPARK STREAMING
+
+==> Si estamos frente a un caso de procesamiento en TIEMPO REAL y ESTRUCTURADO la mejor herramienta para ello 
+    es SPARK STREAMING combinado con SPARK SQL 
+
+----------------------------------------------------------------------------------------------------------------    
+
+¿POR QUÉ BIG DATA ES UN MARCO DE TRABAJO?
+-----------------------------------------
+ _______________             __             _________________          ________          __________________
+|               |         __|  |__         |                 |        |________|        | MARCO DE TRABAJO |  
+|   CONCEPTOS   |        |__    __|        |   TECNOLOGIAS   |         ________         |    (Framework)   |     
+|_______________|           |__|           |_________________|        |________|        |__________________|
+
+- Las 5V                                    - Hadoop                                     BIG DATA
+- Cluster computacional                     - Hive
+- Paralelizacion                            - HBase
+- Distribucion de carga de trabajo          - Spark
+- Escalabilidad                             - Kafka
+- Alta disponibilidad                       - Cassandra    
+- Seguridad                                 - Lenguajes de programacion        
+- Gobierno
+- Patrones de diseño
+
+----------------------------------------------------------------------------------------------------------------
+
+ESCALABILIDAD LINEAL (Una de las ventajas de BIG DATA)
+======================================================
+
+Si yo potencio en cierta proporcion los recursos computacionales
+de un proceso, pues los tiempos de procesamiento se van a reducir
+en esa misma proporcion.
+
+Ejemplo:
+--------
+
+Si un proceso demora 2H (120 min.) y se necesita que demore solo 
+30 min. Podemos potenciar nuestros recursos computacionales de manera
+proporcional (x4) y de esta manera disminuimos el tiempo de 
+procesamiento de manera proporcional (÷4). Esto es a lo que se llama 
+ESCALABILIDAD LINEAL y esta es la magia de BIG DATA.
+
+Para ponernos en contexto, si el area de 'Negocios' necesita que nuestro 
+'Script' tome un tiempo de procesamiento de 30 minutos y no 2 horas 
+como lo hace normalmente. La logica de negocio podria ser 1 sentencia,
+como podrian ser 1000 sentencias de codigo. Lo unico que tendremos que
+hacer es el Tunning computacional, ponerle mas FUERZA DE PROCESAMIENTO.
+Y Big Data te dice que te va a garantizar esta escalabilidad, sin que 
+tengamos que modificar ninguna linea de codigo de nuestra logica de 
+negocio.
+
+Enfoque Big Data --> Escalabilidad (de Proceso)
+-----------------
+                              < / >                             
+                       ____________________         __         _______ 
+    ◯                |                    |     __|  |__     |       |    
+   /|\    ----------> | Logica de Negocio  |    |__    __|    |  CPU  |
+    |                 |____________________|       |__|       |_______|           
+   / \                                            
+ Developer                   Programa                           X CPU                                   
+  < / >   
+ ______________
+| CPU |    t   |    t(H)
+|-----|--------|    3.5  |
+|  1  |     3H |     3   |    ○
+|  2  |   1.5H |    2.5  |   
+|  4  |  0.75H |     2   |   
+|  8  | 0.375H |    1.5  |        ○
+| 16  | 0.375H |     1   |             
+|_____|________|    0.5  |                ○                  ○                                      ○
+                     0   |____________________________________________________________________________________              
+                         0        2        4        6        8        10        12        14        16        CPU  
+
+
+
+Enfoque Big Data --> Escalabilidad (de Hardware)
+-----------------
+
+Agreguemos más 'nodos' al Cluster
+     __________________________________________________________ 
+    |  ____   ____   ____   ____   ____          ____   ____   |    No es nesario modificar los programas      
+    | |  ○ | |  ○ | |  ○ | |  ○ | |  ○ |        |  ○ | |  ○ |  |    (la Logica de negocio) para que hagan uso   
+    | |____| |____| |____| |____| |____|        |____| |____|  |    de los nuevos nodos, el Cluster es visto 
+    |  ____   ____   ____   ____   ____          ____   ____   |    como un 'TODO'. 
+    | |  ○ | |  ○ | |  ○ | |  ○ | |  ○ |        |  ○ | |  ○ |  |     
+    | |____| |____| |____| |____| |____|        |____| |____|  |      
+    |__________________________________________________________|
+
+
+----------------------------------------------------------------------------------------------------------------
+
+CLUSTER
+=======
+
+Dentro de las Tecnologías de la Información (TI), cluster significa integrar 
+dos o más computadoras para que trabajen simultáneamente en el procesamiento 
+de una determinada tarea.
+
+Un clúster es la suma de los recursos computacionales de los servidores
+que lo conforman, es como si tuviésemos una “super-computadora”
+
+¿Qué es un Cluster?
+-------------------
+
+Saber qué es un cluster consiste en entender que se trata de la conexión entre 
+dos o más computadoras con el propósito de mejorar el rendimiento de los sistemas 
+en la ejecución de diferentes tareas.
+
+En el cluster, cada computadora se llama “nodo”, y no hay límites sobre cuántos 
+nodos se pueden interconectar.
+
+Con esto, las computadoras comienzan a actuar dentro de un solo sistema, trabajando 
+juntas en el procesamiento, análisis e interpretación de datos e información, y/o 
+realizando tareas simultáneas.
+
+¿Como trabaja una computadora?
+------------------------------
+ ____________________________
+|             ____           |   
+|   Disco    |  ○ |          |   100 TB Disco  
+|            |____|          |   
+|             ________       |   
+|   Memoria  |________|      |   256 GB RAM
+|             ________       |   
+|   CPU      |________|      |   40 NUCLEOS DE CPU     
+|____________________________|
+
+       Un servidor común
+
+----------------------------------------------------------------------------------------------------------------
+
+PARALELIZACION
+==============
+
+Enfoque Big Data
+-----------------
+                                                        Cluster
+Archivo a                                              ____________________________________ 
+procesar                     < / >                    |  ____   ____   ____   ____   ____  |      
+ _______               ____________________           | |  ○ | |  ○ | |  ○ | |  ○ | |  ○ | |   
+|-------|             |                    |          | |____| |____| |____| |____| |____| | 
+|-------| ----------> | Logica de Negocio  |----------|  ____   ____   ____   ____   ____  |
+|-------|             |____________________|          | |  ○ | |  ○ | |  ○ | |  ○ | |  ○ | |
+|_______|                                             | |____| |____| |____| |____| |____| |
+                      Tu 'Logica de negocio'          |____________________________________|
+                    puede ser tan simple como un 
+                    COUNT o tan compleja como una 
+                  Red Neuronal o puede ser un proceso
+                  que tenga cientos de lineas de codigo.
+
+                         _____________________________________________
+                        |                                             |           
+                        |    El Cluster decide como paralelizarlo,    |   
+                        |    menos complejidad para el desarrollador  |     
+                        |_____________________________________________|
+       
+----------------------------------------------------------------------------------------------------------------
+
+LOGICA DE DISTRIBUCION DE CARGA DE TRABAJO
+===========================================
+
+==> Cuando uno desarrolla, como minimo, va a tener que especificar 2 partes:
+
+1.- Nuestro proceso, nuestra Logica de negocio, que es lo que queremos hacer, quizas, un COUNT o una
+    Red Neuronal.
+2.- Cuanta RAM y cuanta CPU va a utilizar nuestro programa. ¿Y esto por que es importante? Mientras más
+    recursos computacionales coloque más rápido va a ir mi programa
+
+Enfoque Big Data
+-----------------
+                                                                                          
+                              < / >                             
+                       ____________________         __         _________________  
+    ◯                |                    |     __|  |__     |  RAM: 500 GB    |    
+   /|\    ----------> | Logica de Negocio  |    |__    __|    |  CPU: 100 CPU   |
+    |                 |____________________|       |__|       |_________________|           
+   / \                                            
+ Developer                   Programa                          Tuning de recursos                                   
+  < / >                         |                                      |         
+                                |______________________________________|
+                                                    |
+                                                    |
+                                                    ˅
+                                  ____________________________________
+                                 |  ____   ____   ____   ____   ____  | 
+                                 | |  ○ | |  ○ | |  ○ | |  ○ | |  ○ | | 
+                                 | |____| |____| |____| |____| |____| | 
+                                 |  ____   ____   ____   ____   ____  |
+                                 | |  ○ | |  ○ | |  ○ | |  ○ | |  ○ | |
+                                 | |____| |____| |____| |____| |____| |
+                                 |____________________________________|
+                         ________________________________________________________
+                        |                                                        |           
+                        |    El Cluster decide automaticamente como distribuir   |   
+                        |    la carga de trabajo, menos complejidad para el      |   
+                        |    desarrollador                                       |     
+                        |________________________________________________________|
+
+El propio Cluster es el que va a balancear la carga de trabajo, eso es lo que se conoce
+como un Cluster de BIG DATA. Cuando un Cluster paraleliza tu logica de negocio y distribuye
+esa logica de negocio en diferentes servidores para que se ejecuten de manera PARALELA Y
+AUTOMATICA, estamos frente a un Cluster de BIG DATA. 
+
+Por ejemplo, si nos entregan un archivo mas pesado del que veniamos trabajando y nuestra
+infraestructura no lo puede procesar, simplemente compramos mas infraestructura y ejecutamos
+nuestro codigo y no vamos a tener que modificar ninguna sola linea de codigo, PORQUE ES EL
+PROPIO CLUSTER QUIEN ES EL QUE DISTRIBUYE Y PARALELIZA LO QUE NOSOTROS VAYAMOS A PROGRAMAR.
+Esa es la magia de Big Data.
+
+----------------------------------------------------------------------------------------------------------------
+
+ALTA DISPONIBILIDAD
+====================
+
+Enfoque Big Data ----------> ALTA DISPONIBILIDAD (De Datos)
+-----------------
+
+- Replicación de datos
+- Copiara la informacion en otros servidores
+- En caso que un servidor se caiga, se utiliza la copia realizada en otro servidor
+- El Cluster realiza esto de manera automatica
+
+Enfoque Big Data ----------> ALTA DISPONIBILIDAD (De Proceso)
+----------------
+
+- 'Si se cae un servidor' el clúster envía sólo la parte caída a otro nodo
+- El Cluster realiza esto de manera automatica
+
+----------------------------------------------------------------------------------------------------------------
+
+SEGURIDAD
+=========
+
+Seguridad de datos en reposo
+----------------------------
+
+- Para evitar que alguien ingrese a nuestra data, se necesita ENCRIPTAR LOS DATOS
+- El nivel minimo de 'Encriptacion' que se recomienda a nivel empresarial es el 'AES 256'
+- Recomendacion: No hay que encriptar todos los 'Discos Duros' del Cluster. Solamente los que tengan
+  informacion sensible. Porque el hecho de encriptar los datos va a aumentar un 20% en los tiempos
+  de procesamiento. 
+
+Seguridad de datos en movimiento
+--------------------------------
+
+- Se tiene una 'Fuente de datos externa' con informacion sensible y la vamos a guardar en nuestro Cluster
+  para procesarlo con Big Data. ¿Que es lo que podria pasar? Alguien podria interceptar esta informacion
+  y ver los datos. Asi que, la informacion sensible debemos transferirla por medio de un canal seguro,
+  tradicionalmente se utiliza un 'Canal VPN'. ¿Cual es el problema? Es que ese movimiento de datos se
+  penaliza bastante, puede ser que la Ingesta de datos se haga un 80% mas lento. Asi que la misma 
+  recomendacion, solamente hay que enviar por un Canal seguro, aquella informacion sensible. Por ejemplo,
+  informacion bancaria.
+
+Seguridad de Acceso Remoto
+--------------------------
+
+- No cualquier persona va a poder loggearse al Cluster, debe tener su Usuario y Contraseña. Para eso Podemos
+  utilizar tecnologias basicas como el 'LDAP'. El LDAP lo que hace es otorgarle un Usuario y contraseña a 
+  cada usuario.
+
+Seguridad de los servicios
+--------------------------
+
+- Una vez que los usuarios han ingresado al Cluster, no todos van a usar las tecnologias, dependiendo de eso
+  hay que dar acceso a ciertas tecnologias a algunos usuarios. Para eso hay que asegurar los servicios, y para
+  ello utilizamos algo llamado 'Kerberos'.
+  
+Seguridad de datos en Cloud
+---------------------------
+
+- Tokenizacion
+
+----------------------------------------------------------------------------------------------------------------
+
+GOBIERNO
+========
+
+Poner limites 
+
+----------------------------------------------------------------------------------------------------------------
+
+PATRONES DE DISEÑO
+==================
+
+- ¿Qué es un patrón de diseño? Es una forma estandar de resolver un problema. Para Big Data ya existen Patrones
+  de diseño y estos nos ayudaran a codificar mas facilmente. Por ejemplo, existe un patron llamado 'Micro Batch'
+  que nos va ayudar a implmentar 'Real Time'. Tambien existe otro patron llamado 'Semi estructured ....' que nos
+  permitira obtener data flexible que puede evolucionar en el tiempo.
+
+----------------------------------------------------------------------------------------------------------------

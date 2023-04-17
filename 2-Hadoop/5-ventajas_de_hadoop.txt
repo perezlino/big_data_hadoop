@@ -1,0 +1,15 @@
+VENTAJAS DE HADOOP
+==================
+
+1.- Abstrae al desarrollador de la distribución de la carga de trabajo, es decir, el desarrollador 
+    sólo se preocupa en construir su programa y decirle al clúster que lo ejecute con cierta 
+    cantidad de RAM y CPUs, el clúster se encargará de elegir a los servidores que en ese 
+    momento estén disponibles
+
+2.  Funciona sobre hardware commodity, es decir no necesita de un servidor especial tipo IBM 
+    que puede llegar a costar mucho dinero.
+
+3.  Permite la escalabilidad lineal, es decir si un proceso se ejecuta en 10 minutos con 5GB de 
+    RAM y 3 CPUs, entonces con 10GB de RAM y 6 CPUS deberá ejecutarse en 5 minutos.
+
+4.  Permite aumentar la potencia del clúster fácilmente, agregando más nodos al clúster.

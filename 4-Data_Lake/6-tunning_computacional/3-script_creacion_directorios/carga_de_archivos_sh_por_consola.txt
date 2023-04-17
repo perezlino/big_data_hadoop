@@ -1,0 +1,12 @@
+Estamos trabajando con los archivos: arquetipo_hadoop_1.sh
+                                     arquetipo_hadoop_2.sh
+
+En consola se escribe:
+
+                sh /home/.../arquetipo_hadoop_1 "mi_usuario" "directorio_ejemplo"
+
+donde:
+
+"mi_usuario"  : Es el valor del parametro 1
+
+"directorio_ejemplo" : Es el valor del parametro 2

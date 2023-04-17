@@ -1,0 +1,70 @@
+ARQUITECTURA DE SERVICIOS
+=========================
+
+Servicios de HBase
+------------------
+
+Respecto a la arquitectura de servicios, ¿cuáles son los servicios que tiene Hbase? en el nodo GATEWAY tienes que 
+instalar el servicio conocido como “Gateway”. Con este servicio vamos a poder abrir la consola de HBase llamada 
+“Hbase Shell”. En el nodo MASTER tenemos que instalar un servicio conocido como “HMaster” y en los nodos SLAVES 
+un servicio conocido como “Region Server”. 
+
+
+¿Cómo almacena HBase?
+---------------------
+
+Hay un detalle muy importante que tenemos que hablar sobre los “Region Server”, la forma en cómo almacena HBase 
+almacena los datos y la importancia del campo ROW KEY. Por ejemplo, vamos a poner un ejemplo muy simple, lo ideal 
+sería lo siguiente, supongamos que tenemos 100 GB de datos que hemos ido acumulando en tiempo real y supongamos 
+que solamente tenemos 4 servidores esclavos, lo ideal sería que en cada “Region Server” si tenemos 4 y tenemos 100 GB, 
+más o menos se han ido almacenando 25 GB en cada servidor esclavo, que esté bien balanceado los datos entre los 
+diferentes servidores. ¿Qué sería lo malo? lo malo sería que solamente un servidor monopolice el almacenamiento de 
+datos, que en solo un servidor estén los 100 GB y en el resto 0. ¿Cuál es el problema con Hbase? tú como desarrollador 
+le vas a tener que indicar cómo balancear la escritura de los registros entre los diferentes servidores, si tú no se 
+lo indicas a HBase podría darse este escenario, donde solo un servidor esté trabajando y el resto este libre. ¿Cómo 
+se va a hacer este balanceo? hay muchas técnicas que pueden llegar a ser complejas, pero en la vida real la más simple 
+de todas es trabajar con este ROW KEY, vamos a poner un ejemplo, el comando para hacer la carga es simple, lo 
+importante va a ser la estrategia que vamos a seguir para seleccionar ese balanceo. Por ejemplo, hay algunos países 
+en donde los identificadores del RUC o el RUT, ya sabemos, identificadores que tienen las personas jurídicas, las 
+empresas, tiene una serie de reglas, por ejemplo, que comiencen con 10 o con 20, esa es la regla. ¿Qué es lo que podría 
+pasar? ya sabemos que en nuestra tabla si guardamos datos de una empresa vendrá la empresa 1 que tendrá un RUT que 
+comienza con 10 y luego seguirá una cadena muy larga, la segunda empresa tendrá un RUT que comienza con 10 y una cadena 
+larga, luego quizás viene una empresa que tenga un RUT que comienza con 20 y una cadena larga, viene otra empresa que 
+comienza con 10 y así, todos los datos se van a guardar de esta manera. Supongamos que no le decimos a HBase una 
+estrategia de balanceo de carga. ¿Qué es lo que podría pasar? como a HBase no le hemos dicho cómo distribuir la carga 
+de almacenamiento entre nuestros diferentes servidores, Hbase podría hacer lo siguiente: como el desarrollador no me a 
+dicho, yo voy a hacer lo siguiente, todos los ROW KEY que comienzan entre 1 y 2 los voy a mandar al Region Server 1, 
+los que comiencen con 3 o 4, los voy a mandar al Region Server 2, los que comienzan con 4 o 5 los voy a enviar al Region 
+Server 3 y así sucesivamente. Pero, ¿cuál va a ser el problema? ya sabemos que la distribución se hace en el ROW KEY y 
+HBase, como el desarrollador no le dijo nada, siguió esta estrategia, el problema va a estar que todos los datos para 
+la naturaleza de nuestro ROW KEY comienzan con 1 o con 2, por lo tanto, toda la data se va a acumular en el Region 
+Server 1 y en el resto de Region Server no se va a acumular los datos y estaríamos cayendo en el anti-patrón de 
+almacenamiento en tiempo real, un solo servidor que almacena la data. Obviamente, HBase no conoce la naturaleza de los 
+datos, tú como desarrollador tienes que indicar una forma de distribución. ¿Cuál pudo haber sido una forma de 
+distribución más eficiente? podríamos hacer lo siguiente, como ya sabemos que todo va a comenzar con 10 o con 20 
+podríamos decir, a ver, todo lo que comience desde 10 cero (10.0…..) y luego venga cualquier cosa y que vaya hasta 
+10 uno (10.1…..) y luego venga cualquier cosa, van al Region Server 1, todo lo que comience desde 10 dos (10.2…..) y 
+luego venga cualquier cosa y vayan hasta 10 tres (10.3…..) y luego venga cualquier cosa, todo eso se va a ir al Region 
+Server 2. Y así, luego vendría 10 cuatro a 10 cinco, 10 seis a 10 siete, así llegar hasta los que comienzan con 20, 
+20 cero que vayan al 20 uno y así llegar hasta el 20 nueve. Hasta el momento tendríamos muchos cortes, por lo tanto, 
+la data va estar mejor balanceada, porque la naturaleza de nuestro dato fue de esa manera,  Hbase no sabe el comportamiento 
+de la data, así que el desarrollador le tiene que indicar esa forma de distribuir. Ahora, la pregunta es, supongamos que 
+siguiendo esta estrategia de cortes se crean 90 cortes y nosotros solamente tenemos 10 servidores en 10 Region Server en 
+los modos de esclavo, ¿hay algún problema con esto? no, no hay ningún problema, de hecho, se recomienda tener muchos cortes, 
+porque, en un mismo Region Server pueden aterrizar 2 cortes de datos diferentes, mientras el desarrollador no puede manipular 
+esta parte, desarrollador solamente va a indicar la forma en cómo se corta. Hbase distribuirá los cortes entre los 
+diferentes nodos esclavos, eso ya es trabajo de él, pero tú como desarrollador tienes que indicar los cortes. Mientras más 
+cortes hagas con tus ROW KEYS, hay más garantía que por detrás la data va a estar mejor balanceada. Si por ejemplo, hicieras 
+solo 2 cortes quizá al final todo esto vaya acá y acá y tuviste para la suerte y todo se acumuló en un solo servidor. Así 
+que mientras más cortes hagas en tus ROW KEYS para distribuir la data, mejor. Y, ¿qué pasa si un Region Server colapsa? 
+esto también es muy importante, HBase está sobre HDFS y, por lo tanto, todo lo que tú almacenes sera multiplicado por 3. 
+El problema es que el Region Server al menos en la versión actual de HBase no te garantiza que a pesar de que la data esté
+replicada por 3 pueda seguir siendo accesible, ya sabemos que lo que estamos haciendo son cortes para que se distribuya la 
+data entre diferentes Region Server, básicamente va a haber una tabla de metadatos de la siguiente manera: te va a decir: 
+“…mira este registro de acá, con esta ROW KEY aterrizó en el Region Server 1. Si el Region Server 1 cae, a pesar de que 
+puedan haber réplicas de datos, en la metadata ya había quedado que ese registro está en el Region Server 1, pero ya no está 
+en esa región, así que ya no puedes acceder a los datos, a pesar de que haya un factor de replicación por 3 por atrás, no, 
+se perdió completamente el acceso por la forma en cómo distribuye los datos Hbase. ¿Qué es lo importante entender aquí? que 
+en estas tecnologías que trabajan de esta manera como HBase o Cassandra o sus equivalentes, hay que tener cuidado con el 
+colapso de los nodos esclavos, porque si colapsan los modos esclavos hay riesgo de que no puedas acceder a la data. Eso se 
+puede arreglar a nivel de infraestructura con configuraciones de alta disponibilidad.

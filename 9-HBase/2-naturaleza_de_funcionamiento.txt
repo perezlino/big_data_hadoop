@@ -1,0 +1,64 @@
+Naturaleza de funcionamiento
+============================
+
+Namespaces
+----------
+
+¿Cuál es la naturaleza de funcionamiento que tiene Hbase? en primer lugar, formalmente hablando no se llaman bases de datos 
+a los agrupadores de tablas, se llaman NAMESPACE, pero al final es como una base de datos para nosotros. En estos Namespace 
+vamos a tener nuestras tablas HBASE. También sabemos que HBase trabaja sobre los discos duros de HDFS. Se acuerdan, por 
+ejemplo, que nosotros vimos que por defecto en Hive hay una ruta dentro de HDFS que es user/hive/warehouse y si tú no hacías 
+un location toda la data se guardaba en esta ruta, en HBase pasa algo parecido, por defecto hay una ruta llamada /hbase/data, 
+las tablas creemos van a estar dentro de esta ruta de HDFS. Namespace son nuestros agrupadores de tablas. 
+
+
+Tablas
+------
+
+¿Cómo son las tablas en Hbase? son un poco diferentes a las tablas que conocemos, recordemos que en los escenarios de tiempo 
+real va a abundar la data semiestructurada, de hecho, los ejemplos que vamos a construir van a ser con data semiestructurada, 
+vamos a hacerlo con Json y con data basada en la web. Por lo tanto, si en el tiempo real abundan los semiestructurados, HBase 
+debería de soportar esta data semiestructurada de alguna manera y de hecho HBase la soporta. ¿Cómo? cuando nosotros creamos 
+una tabla de manera clásica tenemos columnas, pero en el caso de herramientas como Hbase, vamos a tener familias de columnas, 
+¿qué es esto de la familia de columna? supongamos que en las transacciones que estamos ingestando tenemos: 
+
+1.-  Datos de los familiares
+2.-  Datos personales como los nombres
+3.-  Datos de contacto  (teléfono, correo, fax, dirección)
+
+Viene el registro 1 y en ese registro 1 está el nombre de familiares: madre y padre. En datos personales está: el nombre, 
+apellido y la edad de la persona. Y en los datos de contacto tenemos: teléfono 1, teléfono 2 y correo. Viene registro 2 y en 
+datos familiares tenemos: madre, padre, hermano 1 y hermano 2. En datos personales tenemos: nombre, apellido paterno, apellido 
+materno, edad y estatura. Y en contacto: teléfono 1, teléfono 2, teléfono 3, teléfono 4 y teléfono 5. 
+
+Las familias de columnas en una tabla HBase te van a servir para tener una especie de agrupadores lógicos, sabes que vas a 
+tener datos de familia, datos de personales y datos de contacto. Ahora el registro uno tendrá su propio juego de campos para 
+cada familia de columna, esto lo tienes que ver como agrupadores lógicos (Familiares, Personales y Contacto) y es una forma que 
+HBase te da para que puedas ordenar esas transacciones y no tenerlas tan desordenadas. Gracias a esto más adelante vas a poder 
+crear una especie de vistas en Hive que van a tratar de estructurar esos datos, pero de eso hablaremos más en unos momentos, por 
+ahora saber que HBase te va a permitir tener alguna especie de agrupador lógico con familias de columnas. El otro punto 
+importante de las tablas Hbase, además de las familias de columna es un campo especial conocido como el ROW KEY que puedes verlo 
+como la PRIMARY KEY de una tabla tradicional. En este campo vas a tener que almacenar un valor que sirva de identificador del 
+registro. Si estuviésemos hablando de los datos de una persona probablemente el identificador podría ser su número de documento 
+de identidad. Al ROW KEY no le puedes poner otro nombre, siempre se va a llamar ROW KEY o simplemente KEY, si es el documento de 
+identidad no es que vamos a crear este campo que se llama “documento de identidad”, no,  simplemente se llama ROW KEY y ya tú 
+tendrás que almacenar en ese campo especial los valores del campo que tú has decidido que vaya a ser el ROW KEY, el DNI, el 
+nombre o lo que tú decidas. Es importante que el ROW KEY sea único e irrepetible. ¿Qué pasa si viene un registro con el mismo 
+ROW KEY? pues los campos que están en las familias de columna para ese registro, se sobrescribe por los nuevos que vengan para 
+este nuevo registro con el mismo ROW KEY. Así que hay que tener bastante cuidado. 
+
+
+
+      ROW KEY      ______________ ______________ ______________ 
+         |        |  Familiares  |  Personales  |   Contacto   | <------ FAMILIA DE COLUMNA
+ ________˅________|______________|______________|______________|
+|                 | Madre:       | Nombre:      | Telefono 1:  | 
+|      DNI 1      | Padre:       | Apellido P:  | Telefono 2:  | 
+|                 |              | Edad:        | Correo:      | 
+|_________________|______________|______________|______________|
+|                 | Madre:       | Nombre:      | Telefono 1:  | 
+|                 | Padre:       | Apellido P:  | Telefono 2:  |     
+|      DNI 2      | Hermano 1:   | Apellido M:  | Telefono 3:  | 
+|                 | Hermano 2:   | Edad:        | Telefono 4:  | 
+|                 |              | Estatura:    | Telefono 5:  | 
+|_________________|______________|______________|______________|

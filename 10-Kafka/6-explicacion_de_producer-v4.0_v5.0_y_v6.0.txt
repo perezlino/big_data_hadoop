@@ -1,0 +1,244 @@
+EXPLICACION DEL ARCHIVO "producer-v4.0, producer-v5.0 y producer-v6.0"
+======================================================================
+
+(Comenzamos a trabajar en base al archivo "producer-v3.0")
+
+Vamos a agregar 2 parámetros adicionales, una variable en la cual le voy a indicar cada cuánto tiempo quiero que mi 
+función “readDataFromSource()” se conecte a la fuente de datos y extraiga la data cada 0.1 segundos. Adicionalmente, 
+yo les he dicho que esto tiene que ejecutarse de manera permanente, pero voy a crear una variable de control, el número 
+de iteraciones, quiero que a lo más se hagan 1000 iteraciones de extracción, solamente para controlar el proceso, 
+porque, si ahorita lo dejo el servicio de manera permanente no tiene sentido, es una variable que me va a permitir 
+controlar el proceso. 
+
+         ___________________________________________________________________________________________________
+        |                                                                                                   |
+        |   # Cada cuántos segundos son extraídos los registros  <--------------  Agregamos este parámetro  |
+        |   CONF_SLEEP_SECONDS = 0.1                                                                        |
+        |                                                                                                   |    
+        |   # Cuántas iteraciones se realizarán                  <--------------  Agregamos este parámetro  |
+        |   CONF_NUMBER_ITERATIONS = 1000                                                                   |            
+        |___________________________________________________________________________________________________|
+
+
+De esta ya no estaremos ejecutando el programa de manera manual, si no, que de alguna manera tengo que poner esto en una 
+especie de bucle. Escribiremos una función que se va a llamar “main()”, mi función principal y le voy a decir: “…voy a hacer 
+un for que va a ir desde i comenzando desde cero hasta el número máximo de iteraciones que haya definido, esta extracción se 
+va a repetir 1000 veces y luego, ¿qué es lo que voy a hacer? voy a conectarme la fuente de datos, voy a formatear la data y 
+finalmente voy a escribir los datos en el tópico. Esto se va a iterar 1000 veces.
+
+ __________________________________________________________________________________________________________________________________
+|                                                                                                                                  |             
+|   -- Programa principal --                                                                                                       |     
+|                                                                                                                                  | 
+|   def main():                                                                                                                    |     
+|	                                                                                                                           | 
+|   	for i in range(0, CONF_NUMBER_ITERATIONS):  <----- Realizaremos múltiples escrituras                                       | 
+|		                                                                                                                   | 
+|   		dataFromSource = readDataFromSource()   <----- Obtenemos los datos de la fuente                                    | 
+|		                                                                                                                   | 
+|   		dataFormatted = convertDataToFormatProducer(dataFromSource) <----- Convertimos los datos a un formato compatible   |  
+|                                                                           con KAFKA (string)                                     | 
+|           writeDataToTopic(dataFormatted) <----- Escribimos los datos en el producer                                             |                                      
+|__________________________________________________________________________________________________________________________________|
+
+
+Adicionalmente a eso voy a necesitar una función más, nosotros hemos configurado para que la extracción se realice cada 0.1 
+segundos, esto se va a ejecutar muy rápido, así que de alguna manera tengo que colocar una instrucción dentro de la función 
+“main()” que espere 0.1 segundos antes de volver a repetirse. Una instrucción que duerma mi código por 0.1 segundos. Hay una 
+librería especial en Python que se llama “time” que tiene esa característica. Vamos a crear una función extra que se llama 
+“sleepProcess()”, es también clásico colocarle este nombre. Esta función va a dormir el proceso en lo que indiquemos como 
+parametro en la función “sleep()” de la librería “time”, por tanto, como parámetro recibe la cantidad de segundos que yo quiero 
+dormir el proceso, quiero dormirlo 0.1 segundos.
+
+                                 _______________________________________________
+                                |                                               |
+                                |   -- Detiene el proceso algunos segundos --   |
+                                |                                               |    
+                                |   def sleepProcess():                         |                    
+                                |   	time.sleep(CONF_SLEEP_SECONDS)          |
+                                |_______________________________________________|
+
+
+Y esta función la utilizaremos dentro de la función "main()":
+
+ __________________________________________________________________________________________________________________________________
+|                                                                                                                                  |             
+|   -- Programa principal --                                                                                                       |     
+|                                                                                                                                  | 
+|   def main():                                                                                                                    |     
+|	                                                                                                                           | 
+|   	for i in range(0, CONF_NUMBER_ITERATIONS):  <----- Realizaremos múltiples escrituras                                       | 
+|		                                                                                                                   | 
+|   		dataFromSource = readDataFromSource()   <----- Obtenemos los datos de la fuente                                    | 
+|		                                                                                                                   | 
+|   		dataFormatted = convertDataToFormatProducer(dataFromSource) <----- Convertimos los datos a un formato compatible   |  
+|                                                                           con KAFKA (string)                                     | 
+|           writeDataToTopic(dataFormatted) <----- Escribimos los datos en el producer                                             |
+|                                                                                                                                  | 
+|           sleepProcess() <----- Dormimos el proceso antes de comenzar con la siguiente iteración                                 | 
+|__________________________________________________________________________________________________________________________________|
+
+
+Otra pregunta que nos podemos hacer es ¿el tópico realmente va a resistir la tormenta de datos?. Para ello, podemos modificar los
+valores de nuestras variables constantes y luego probarlas. Podemos decirle que ahora recibiremos 15 registros cada 0.01 segundos,
+más registros y en menos cantidad de tiempo:
+
+         ___________________________________________________________________________________________________
+        |                                                                                                   |
+        |   # Cuántos registros son extraídos                                                               |            
+        |   CONF_SIZE_READ = 70                                                                             |                            
+        |                                                                                                   |            
+        |   # Cada cuántos segundos son extraídos los registros  <--------------  Agregamos este parámetro  |
+        |   CONF_SLEEP_SECONDS = 0.01                                                                       |
+        |                                                                                                   |    
+        |   # Cuántas iteraciones se realizarán                  <--------------  Agregamos este parámetro  |
+        |   CONF_NUMBER_ITERATIONS = 1000                                                                   |            
+        |___________________________________________________________________________________________________|
+
+
+La gran ventaja de tener arquetipos de este tipo es que el desarrollador Big data puede emular este comportamiento. Podemos ir
+probando diferentes escenarios de la tormenta de datos que podria enviarnos. Si nuestro tópico estuviera en nube, ahí podriamos
+ver si necesitamos una sola instancia o requerimos más de una instancia.
+
+Ahora, ya terminamos de hacer pruebas, vamos a ir a la fuente de datos real. lo que tendría que cambiar es el 
+“readDataFromSource()”. Aquí está la lógica que el encargado de scraping tendrá que implementar, que para nuestro caso es muy 
+simple. Obviamente, el “readDataFromSource()” requiere de un parámetro en este caso para ir navegando entre las páginas. Redefino 
+mi función y ahora vamos a utilizarla. 
+
+                __________________________________________________________________________________________________
+               |                                                                                                  |
+               |  --- Lee los datos desde la fuente ---                                                           |               
+               |                                                                                                  |   
+               |  def readDataFromSource(i):                                                                      |       
+               | 
+               |     response = requests.get("https://www.forosperu.net/secciones/foro-libre.149/pagina-"+str(i)")                           |
+               |     htmlData = response.text                                                                     |
+               |         
+               |     return htmlData                                                                              |
+               |                                                                                                  |   
+               |__________________________________________________________________________________________________|
+
+
+Obviamente, también hago unos pequeños cambios en la función "main()". Le vamos a poner un pequeño mensaje "scraping página" y 
+además el bucle 'for' comenzaría desde 1 porque no existe la página 0. 
+
+ __________________________________________________________________________________________________________________________________
+|                                                                                                                                  |             
+|   -- Programa principal --                                                                                                       |     
+|                                                                                                                                  | 
+|   def main():                                                                                                                    |     
+|	                                                                                                                               | 
+|   	for i in range(1, CONF_NUMBER_ITERATIONS):  <----- Realizaremos múltiples escrituras                                       | 
+|		                                                                                                                           | 
+|   		dataFromSource = readDataFromSource(i)   <----- Obtenemos los datos de la fuente                                       | 
+|		                                                                                                                           | 
+|   		dataFormatted = convertDataToFormatProducer(dataFromSource) <----- Convertimos los datos a un formato compatible       |  
+|                                                                           con KAFKA (string)                                     | 
+|           writeDataToTopic(dataFormatted) <----- Escribimos los datos en el producer                                             |
+|
+|           print("Scrapping de página" + str(i))    
+|                                                                                                                                  | 
+|           sleepProcess() <----- Dormimos el proceso antes de comenzar con la siguiente iteración                                 | 
+|__________________________________________________________________________________________________________________________________|
+
+
+Además, estas variables constantes no las utilizaremos, por tanto, las eliminamos:
+
+ ___________________________________________________
+|                                                   |
+|   CONF_FILE_PATH = "/dataset/transacciones.json"  |
+|                                                   |
+|   CONF_SIZE_READ = 10                             |
+|                                                   |
+|   CONF_SLEEP_SECONDS = 0.1                        |
+|___________________________________________________|
+
+
+Punto importante, el “sleep” no es opcional, porque, ¿qué pasa si yo no le pongo el sleep? este proceso se va a repetir 
+extremadamente rápido, muy rápido, tienes que siempre tener un sleep para que la fuente de datos no piense que le estás haciendo 
+un ataque de denegación de servicio, tienes que tener un sleep siempre. Por ejemplo, si yo lo mandase así en este momento sin el 
+sleep los servidores de la página web que estoy scrapeando me van a detectar que estoy haciendo un scrapeo automático, así que 
+para evitar eso, voy a scrapear las páginas cada segundo para que pareciese que alguien estuviese navegando. Les adelanto que en 
+algunos países esto es ilegal, si no hay un API oficial para scrapear ciertas páginas web, podría ser ilegal, va a depender, aquí 
+en donde estoy por suerte no es ilegal así que no pasa nada. Vamos a scrapear la página web cada segundo. Ahora lo ejecutamos y 
+ahí está scrapeando la página 1, la página 2, la página 3 y así y todo eso está aterrizando en nuestro Kafka y ya luego con el 
+Consumer iremos extrayendo las páginas web, por ejemplo, si estuviéramos haciendo “text mining” podríamos ir extrayendo de 10 en 
+10 las páginas web y hacerle algo, pero aquí ya lo tenemos, acá estamos haciendo una scraping de datos sobre big data que es 
+paralelizable, ¿por qué? ahora estamos en el sitio de “foros Perú” y digamos que también hay un “foros Chile” y quiero enviar los 
+datos de foros Chile también a este tópico, pues, tendría que tener un Producer de la misma manera que se conecte a esa fuente de 
+datos para que nos envíe los datos a este tópico también y tendríamos un tópico que está centralizando nuestras diferentes fuentes 
+de datos en un único punto para que ya luego nuestros procesos los extraigan y les hagan algo. 
+
+Como esta no es una clase de scraping web nosotros vamos a trabajar con cadenas JSON, así que, por ejemplo, vamos a utilizar un 
+API JSON, vamos a volver entonces a esa API JSON que hemos visto que te da la hora en función de la latitud y longitud. Así que 
+el “readDataFromSource()” sería este de aquí:
+
+                __________________________________________________________________________________________________
+               |                                                                                                  |
+               |  --- Lee los datos desde la fuente ---                                                           |               
+               |                                                                                                  |   
+               |  def readDataFromSource():                                                                       |       
+               |                                                                                                  |  
+               |     response = requests.get("http://api.open-notify.org/iss-now.json")                           |
+               |     jsonData = json.loads(response.content)                                                      |
+               |                                                                                                  |  
+               |     return jsonData                                                                              |
+               |                                                                                                  |   
+               |__________________________________________________________________________________________________|
+
+
+Y de ahí no hay nada más que cambiar o podríamos parametrizar la url de la API: 
+
+CONF_API_REST = "http://api.open-notify.org/iss-now.json" 
+
+Y reeemplazamos:
+                __________________________________________________________________________________________________
+               |                                                                                                  |
+               |  --- Lee los datos desde la fuente ---                                                           |               
+               |                                                                                                  |   
+               |  def readDataFromSource():                                                                       |       
+               |                                                                                                  |  
+               |     response = requests.get(CONF_API_REST)                                                       |
+               |     jsonData = json.loads(response.content)                                                      |
+               |                                                                                                  |  
+               |     return jsonData                                                                              |
+               |                                                                                                  |   
+               |__________________________________________________________________________________________________|
+
+
+Y modificamos nuestra función "main()":
+
+ __________________________________________________________________________________________________________________________________
+|                                                                                                                                  |             
+|   -- Programa principal --                                                                                                       |     
+|                                                                                                                                  | 
+|   def main():                                                                                                                    |     
+|	                                                                                                                               | 
+|   	for i in range(0, CONF_NUMBER_ITERATIONS):  <----- Realizaremos múltiples escrituras                                       | 
+|		                                                                                                                           | 
+|   		dataFromSource = readDataFromSource()   <----- Obtenemos los datos de la fuente                                        | 
+|		                                                                                                                           | 
+|   		dataFormatted = convertDataToFormatProducer(dataFromSource) <----- Convertimos los datos a un formato compatible       |  
+|                                                                           con KAFKA (string)                                     | 
+|           writeDataToTopic(dataFormatted) <----- Escribimos los datos en el producer                                             |
+|
+|           print("Scrapping de API")    
+|                                                                                                                                  | 
+|           sleepProcess() <----- Dormimos el proceso antes de comenzar con la siguiente iteración                                 | 
+|__________________________________________________________________________________________________________________________________|
+
+
+Si se dan cuenta seguimos es scrapeando pero el arquetipo no ha cambiado. La magia de este arquetipo es que todo el problema de 
+la conexión esté puesta en una función ahí y luego el resto lo convertimos a string y lo escribimos en el tópico Kafka con todas 
+las recomendaciones que hemos dado. Pero tú como persona de Big data lo que tienes que hacer es siempre trabajar con una fuente 
+de datos simulada en un pequeño archivo, para que no dependas del equipo de scrapping para que desde el día uno puedas empezar a 
+hacer tu proyecto y ver si tu infraestructura de Kafka va a soportar la tormenta de datos. Y hemos visto que ya podemos hacer 
+conexiones a diferentes fuentes de datos y ahí va a depender, por ejemplo, hacer una conexión a datos para scrapear comentarios 
+de Facebook es un poco más difícil, hay que tener para cada página que queremos scrapear un token de seguridad y un permiso 
+explícito que la persona tiene que dar para poder scrapear los comentarios que deja, que sería otro token de seguridad, así que 
+ya eso lo tiene que hacer el experto de la fuente de datos en tiempo real que estemos ingestando. Pero nosotros como personas de 
+Big data nos va a bastar con tener implementado un archivo en donde tengamos algunas transacciones de ejemplo y por medio de esta 
+configuración emular la tormenta de datos, quiero extraer 10 registros cada 0.1 segundos o lo que la tormenta de datos necesite. 
+Ejecuto esto y aquí tenemos por ejemplo una tormenta de datos que esta viendo 10 registros cada 0.1 segundos y ya bueno 
+dependiendo el caso nosotros lo configuraremos según nuestra realidad. Para efectos académicos lo vamos a dejar de esta manera.
+(Lo dejamos de la manera en que aparece en el archivo "producer-v6.0").

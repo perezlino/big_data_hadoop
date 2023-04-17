@@ -1,0 +1,5 @@
+ARQUITECTURA DE COMPONENTES
+===========================
+
+Respecto a la arquitectura de componentes, como Kafka requiere de una infraestructura dedicada, ya 
+no se dibuja sobre los componentes de Hadoop, ya que, esto va por fuera de Hadoop, es otro Clúster. 

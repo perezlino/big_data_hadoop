@@ -1,0 +1,354 @@
+INTRODUCCION A HDFS
+===================
+
+● HDFS es un sistema de almacenamiento tolerante a fallos que puede almacenar gran cantidad de datos, escalar 
+  de forma incremental y sobrevivir a fallos de hardware sin perder datos.
+
+● Es la parte de almacenamiento de datos de Hadoop.
+
+● Estos procesos van a trabajar que estan almacenados en HDFS
+
+	PROCESOS (YARN)      ----\  DATOS
+         	 (MAPREDUCE) ----/  (HDFS)
+
+
+● Es un sistema de almacenamiento en que vamos a poder copiar todos los archivos que queramos subir a Hadoop.
+  Se van a guardar aquí. Porque ahora veremos que los datos se replican y se distribuyen a lo largo de todos 
+  los nodos del cluster. Con lo cual esto me permite almacenar una gran cantidad de información porque voy a 
+  poder utilizar todos los discos de cada nodo y además como replico la información en distintos nodos, siempre 
+  voy a tener la seguridad de que aunque se me caiga una máquina, la información, el dato, lo voy a tener en otro
+  nodo.
+
+● HDFS gestiona el almacenamiento en el cluster, dividiendo los archivos en "bloques" y almacenando copias duplicadas
+  a traves de los nodos. Nosotros podemos definir el numero de copias que hacemos en los distintos nodos del cluster.
+
+● El tamaño de un bloque es de 128 MB.
+
+● Por defecto se replican en 3 nodos distintos. Puedo tener más de tres copias, pero, las buenas prácticas 
+  y la experiencia te dicen que poner más bloques no va a mejorar el rendimiento y si que va a disminuir el 
+  tamaño total que vas a poder guardar en tu cluster.
+
+● Ejemplo: Un archivo se dividió en 5 bloques
+	 _____ _____ _____ _____ _____
+	|     |     |     |     |     |			
+	|  1  |  2  |  3  |  4  |  5  |  <--------- Archivo HDFS
+	|_____|_____|_____|_____|_____|		
+
+	 _____ _____ _____   _____ _____ _____   _____ _____ _____   _____ _____ _____   _____ _____ _____  
+	|     |     |     | |     |     |     | |     |     |     | |     |     |     | |     |     |     |  		
+	|  1  |  4  |  5  | |  2  |  3  |  5  | |  1  |  2  |  3  | |  1  |  4  |  3  | |  2  |  4  |  5  |
+	|_____|_____|_____| |_____|_____|_____| |_____|_____|_____| |_____|_____|_____| |_____|_____|_____|
+	    __________          __________           __________          __________          __________
+	   |	      |	       |	      |         |	       |	    |	       |	    |          | 
+	   |  NODO 1  |        |  NODO 2  |         |  NODO 3  |        |  NODO 4  |        |  NODO 5  | 
+	   |__________|        |__________|         |__________|        |__________|        |__________|
+
+● Al crear un cluster hadoop hay:
+	- Un nodo que actúa como maestro de datos. Solo tienen metadatos
+	- El resto de nodos son esclavos. Contiene los datos propiamente dichos
+
+-----------------------------------------------------------------------------------------------------------------------
+CLUSTER PSEUDODISTRIBUIDO (core-site.xml)
+=========================================
+
+Vamos a crear un cluster en donde vamos a tener un solo nodo y este será maestro y esclavo. En la vida real nunca va a 
+pasar. En producción siempre vamos a tener un maestro y multiples esclavos. Entonces, vamos a instalar en el mismo nodo
+l aparte maestro y la parte esclava. Por eso se denomina "Pseudo-distribuido".
+
+1.- (Solo tenemos una ventana abierta) --> [hadoop@localhost ~] --> cd /opt/hadoop/etc/hadoop
+
+2.- [hadoop@localhost hadoop] --> pwd --> /opt/hadoop/etc/hadoop --> ls
+
+Este archivo contiene las propiedades de configuración generales del cluster.
+3.- ls core-site.xml 
+
+Este archivo contiene la configuracion para lo que es el sistema de archivos HDFS
+4.- ls hdfs-site.xml 
+
+Este archivo contiene la configuracion para MapReduce
+5.- ls mapred-site.xml
+
+Este archivo nos permitirá configurar el modo del trabajo de proceso jar.
+6.- ls yarn-site.xml
+
+Empezaremos con el primer archivo
+7.- gedit core-site.xml --> Se abrirá un block de notas y entre las etiquetas <configuration></configuration>
+                            escribimos lo siguiente: 
+				<configuration>
+					<property>
+						<name>fs.defaultFS</name>
+						<value>hdfs://localhost:9000</value>
+					</property>
+				</configuration>
+
+Esto nos dice que "sistema de archivos vamos a usar para hadoop". Nosotros vamos a utilizar el "standar" que es hdfs://.
+Luego, tenemos que decirle a nuestro sistema de Hadoop es donde puede localizar el "Maestro HDFS", es decir, el servidor
+maestro que va a contener los datos, que se suele llamar "NAMENODE". En resumen, en el "core-site" se pone básicamente el
+puerto y el tipo de sistema de archivos.
+
+8.- Guardar y cerramos
+
+-----------------------------------------------------------------------------------------------------------------------
+CLUSTER PSEUDODISTRIBUIDO (hdfs-site.xml)
+=========================================
+
+1.- Seguimos en la misma ventana --> [hadoop@localhost hadoop] --> gedit hdfs-site.xml
+
+2.- Se abrirá un block de notas y entre las etiquetas <configuration></configuration> escribimos lo siguiente: 
+		<configuration>
+			<property>
+				<name>dfs.replication</name> ----\  Con esto le decimos a Hadoop que no replique 3 veces
+				<value>1</value>             ----/  sino, que no replique, por eso colocamos "1" dado que tenemos 
+			</property>				    1 solo nodo.	
+			<property>
+				<name>dfs.namenode.name.dir</name> ----\ Identifica donde se encuentra la informacion del nodo maestro.
+				<value>/datos/namenode</value>     ----/ Dijimos que el maestro solo tenia metadatos. Metadatos que significan
+			</property>                                  básicamente toda la información general del cluster. Aqui le decimos
+			<property>                                   en qué directorio guarda los metadatos.
+				<name>dfs.datanode.data.dir</name> ----\
+				<value>/datos/datanode</value>     ----/  Nos indica en cada esclavo donde los guarda los datos. Recordar que  
+			</property>                                   los datos de verdad, los reales, los bloques de los archivos se guardan
+		</configuration>                                  en los esclavos. Aqui le decimos en que directorio guarda los datos.
+
+
+Cuando tengamos un cluster con varios nodos, en el nodo maestro solo estará este directorio "/datos/namenode" y en los esclavos 
+estará solo este directorio "/datos/datanode".
+
+-----------------------------------------------------------------------------------------------------------------------
+CLUSTER PSEUDODISTRIBUIDO (Formatear HDFS)
+==========================================
+
+1.- Nuevamente abrimos una nueva ventana (Ventana 2) --> [hadoop@localhost hadoop] --> su - root
+    contraseña : catalina
+
+2.- Desde ventana 2, [root@localhost ~] --> cd / 
+
+3.- Desde ventana 2, [root@localhost /] --> pwd --> /
+
+4.- Desde ventana 2, [root@localhost /] --> mkdir datos --> cd datos 
+
+5.- Desde ventana 2, [root@localhost datos] --> pwd --> /datos
+
+6.- Desde ventana 2, [root@localhost datos] --> mkdir namenode --> mkdir datanode 
+
+7.- Desde ventana 2, [root@localhost datos] --> cd .. 
+
+8.- Desde ventana 2, [root@localhost /] --> chown -R hadoop:hadoop datos (modificamos el owner del directorio datos) --> ls -l
+
+Lo que hara este comando es irse al directorio correspondiente (/datos/namenode) y crear el sistema de archivos. En realidad
+lo que crea son los metadatos. Luego, según vayamos creando nodos va a ir creando los bloques dentro de cada uno de estos.
+9.- Desde la ventana 1, [hadoop@localhost hadoop] --> hdfs namenode -format    
+
+10.- Desde ventana 1, [hadoop@localhost hadoop] --> cd /datos
+
+11.- Desde ventana 1, [hadoop@localhost datos] --> pwd --> /datos
+
+12.- Desde ventana 1, [hadoop@localhost datos] --> ls --> cd namenode
+
+13.- Desde ventana 1, [hadoop@localhost namenode] --> pwd --> /datos/namenode
+
+14.- Desde ventana 1, [hadoop@localhost namenode] --> ls -l
+
+15.- Desde ventana 1, [hadoop@localhost namenode] --> cd current
+
+16.- Desde ventana 1, [hadoop@localhost current] --> pwd --> /datos/namenode/current
+
+17.- Desde ventana 1, [hadoop@localhost current] --> ls
+
+-----------------------------------------------------------------------------------------------------------------------
+ARRANCAR HDFS
+=============
+
+1.- Desde la ventana 1, [hadoop@localhost ~] --> cd /datos
+
+2.- Desde la ventana 1, [hadoop@localhost datos] --> pwd --> /datos
+
+3.- Desde la ventana 1, [hadoop@localhost datos] --> ls -l --> Vemos que tenemos creados los directorios "datanode" y "namenode"
+
+4.- Desde la ventana 1, [hadoop@localhost datos] --> cd /opt/hadoop/sbin
+
+5.- Desde la ventana 1, [hadoop@localhost sbin] --> ls --> start-dfs.sh
+
+Vemos que se ejecutan 3 procesos: datanode, namenode y secundarynamenode
+6.- Desde la ventana 1, [hadoop@localhost sbin] --> start-dfs.sh
+
+Nos permite visualizar que procesos Java tenemos en la maquina
+7.- Desde la ventana 1, [hadoop@localhost sbin] --> jps
+
+Lo mismo, pero con un poco más de información
+8.- Desde la ventana 1, [hadoop@localhost sbin] --> jps -l
+
+Podemos observar que hay un conjunto de procesos Java lanzados, en concreto tres. Los tres que indicamos
+anteriormente. Es decir, aquí tendríamos un proceso que está llamando al Java, que se llama 'namenode'.
+Otro proceso un poquito más abajo que se llama 'datanode' y otro proceso un poquito más abajo que se llama 
+'secondarynamenode'.
+9.- Desde la ventana 1, [hadoop@localhost sbin] --> ps -ef | grep java
+
+10.- Desde la ventana 1, [hadoop@localhost sbin] --> cd /datos
+
+11.- Desde la ventana 1, [hadoop@localhost datos] --> pwd --> /datos
+
+Podemos ver que han aparecido archivos dentro de este directorio. Esto debido a que acabamos de arrancar 'dfs'.
+12.- Desde la ventana 1, [hadoop@localhost datos] --> cd datanode/ --> ls
+
+¿cómo podemos probar que efectivamente nuestro entorno Hadoop está funcionando?
+13.- Desde el navegador --> https://localhost:9870 --> Nos dirá que esta "active"
+
+-----------------------------------------------------------------------------------------------------------------------
+TRABAJAR CON HDFS - fsimage y edits
+===================================
+
+Ahora lo que vamos a ver es cómo hace Hadoop, en este caso HDFS, para hacer la gestión de la modificación de los datos,
+es decir, cómo es la estructura de directorios que tenemos dentro de los metadatos de Hadoop y cómo va ir gestionando.
+
+1.- Desde la ventana 1, [hadoop@localhost datos] --> cd namenode/
+
+2.- Desde la ventana 1, [hadoop@localhost namenode] --> pwd --> /datos/namenode
+
+3.- Desde la ventana 1, [hadoop@localhost namenode] --> ls -l --> cd current
+
+4.- Desde la ventana 1, [hadoop@localhost current] --> pwd --> /datos/namenode/current
+
+5.- Desde la ventana 1, [hadoop@localhost current] --> ls -l
+
+● HDFS dispone de unos archivos que gestionan los cambios que se producen en el cluster de HDFS
+
+● Básicamente son:
+	- Edits_000xxxxxxx : son los cambios que se van produciendo dentro de la base de datos de HDFS,
+                             es decir, todo lo que son los metadatos.
+	- Edits_inprogress_xxxxx : es donde se están escribiendo los datos en este momento
+	- Fsimage_00000xxxxx : contiene una especie de copia, una foto, de un momento en el tiempo del sistema de 
+			               archivos.
+
+● Fsimage es una foto de un momento concreto del estado de HDFS
+
+● Al arrancar HDFS se carga en memoria el último archivo "fsimage" disponible junto con los "Edits" que no hayan 
+  sido procesados. Y este archivo que se carga en memoria en realidad no se toca, el fsimage como tal, sino, que  
+  se construye el archivo "Edits_inprogress". Entonces, el "Edits_inprorgress" lo que va haciendo es que se van 
+  cambiando los datos en memoria, no en el archivo "fsimage" original. Esto es por un motivo de rendimiento, porque,
+  si tuvieramos que andar guardando en el archivo correcto (en el "fsimage") cada cosa que se hace, el sistema 
+  sería inmanejable. Por lo tanto, dentro del "Edits_inprogress", por asi decirlo, se van almacenando, se van guardando
+  los bloques. Cada cierto tiempo se sincroniza, a traves del proceso "secondarynamenode", y que porlo tanto, su
+  funcionalidad básica es sincronizar lo que se ha ido grabando en ese momento con lo que habia en el "fsimage".
+
+  - Supongamos que vamos a ir almacenando cambios. 
+  - Estos cambios se van a ir almacenando en el Edits correspondiente, en el Edits_inprogress
+  - Cada cierto tiempo el proceso 'secondarynamenode' normalmente cada hora o cada vez que se llenan 128 megas 
+    de información, que eso equivale a un bloque, coge el 'fsimagen' y a partir de ahí se genera un 'fsimage' 
+    nuevo con, la foto que había, por ejemplo, a las once de la mañana junto con todos los cambios que se han 
+    hecho, por ejemplo, hasta las 12. Eso genera un 'fsimagen' nuevo, que se deja registrado y se empieza con
+    un 'Edits_000xx' nuevo. Por eso vamos a ver un 'Edits_inprogress' que seria el que en ese momento se está
+    utilizando y una serie de 'Edits_000xx' que serian los checkpoints, puntos anteriores por donde han ido 
+    pasando los cambios y también tendremos unos cuantos 'fsimagen', todas las fotos que se han ido haciendo a
+    lo largo del trabajo. Por lo tanto, a lo largo del tiempo podremos llegar a tener un número n de 'Edits' y 
+    un número  n de 'fsimages'.
+
+  	    __________          _____________          
+	   |	      |	       |	         |       
+	   | Cambios  | -----> | Edits_000xx | \        
+	   |__________|        |_____________|  \    ___________          ______________
+                                             \  |  Fsimage  | 	     | Edits_000xx  |		
+  	    __________          _____________    /  |   nuevo   | -----> |    nuevo  	|
+	   | Proceso  |	       |	         |	/   |___________|        |______________| 
+	   |Secondary | -----> |   fsimage   | /         
+	   | Namenode |        |_____________|  
+       |__________|	
+
+● Este sistema de archivos no se toca. Es un sitio donde escribe HDFS automáticamente y, por lo tanto, no es un sistema 
+  de archivos, ni es un sitio donde debamos de tocar manualmente.	
+
+-----------------------------------------------------------------------------------------------------------------------
+TRABAJAR CON ARCHIVOS
+=====================
+
+1.- Desde la ventana 1, [hadoop@localhost ~] --> start-dfs.sh (Si lo habiamos apagado con 'stop-dfs.sh' o encendemos recien la VM)
+
+2.- Desde la ventana 1, [hadoop@localhost ~] --> pwd --> /home/hadoop
+
+3.- Desde la ventana 1, [hadoop@localhost ~] --> hdfs dfs --> Vemos una lista de posibles comandos que podemos utilizar
+
+4.- Desde la ventana 1, [hadoop@localhost ~] --> cd /opt/hadoop/bin/
+
+5.- Desde la ventana 1, [hadoop@localhost bin] --> ls --> Aqui se encuentra el comando 'hdfs'
+
+6.- Desde la ventana 1, [hadoop@localhost bin] --> echo Hola >> prueba.txt --> Creamos el archivo 'prueba.text' que tendra el texto 'Hola'
+                                                                               Se encuentra en la ruta /opt/hadoop/bin/prueba.txt
+
+Vamos a crear un directorio
+6.- Desde la ventana 1, [hadoop@localhost bin] --> hdfs dfs -mkdir /temporal --> hdfs dfs -ls /
+
+7.- Desde la ventana 1, [hadoop@localhost bin] --> hdfs dfs -put prueba.txt /temporal --> hdfs dfs -ls /temporal
+
+8.- Desde la ventana 1, [hadoop@localhost bin] --> cd /datos/datanode/
+
+9.- Desde la ventana 1, [hadoop@localhost datanode] --> ls -l --> cd current/
+
+10.- Desde la ventana 1, [hadoop@localhost current] --> pwd --> /datos/datanode/current
+
+Dentro de esta ruta encontraremos el "BLOCK POOL ID"
+11.- Desde la ventana 1, [hadoop@localhost current] --> ls -l --> cd BP-690530888-127.0.0.1-1681608630130
+
+12.- Desde la ventana 1, [hadoop@localhost BP-690530888-127.0.0.1-1681608630130] --> pwd --> /datos/datanode/current/BP-690530888-127.0.0.1-1681608630130
+
+13.- Desde la ventana 1, [hadoop@localhost BP-690530888-127.0.0.1-1681608630130] --> ls --> cd current/
+
+14.- Desde la ventana 1, [hadoop@localhost current] --> pwd --> /datos/datanode/current/BP-690530888-127.0.0.1-1681608630130/current
+
+15.- Desde la ventana 1, [hadoop@localhost current] --> ls -l --> cd finalized/
+
+16.- Desde la ventana 1, [hadoop@localhost finalized] --> pwd --> /datos/datanode/current/BP-690530888-127.0.0.1-1681608630130/current/finalized
+
+17.- Desde la ventana 1, [hadoop@localhost finalized] --> ls --> cd subdir0/
+
+18.- Desde la ventana 1, [hadoop@localhost subdir0] --> pwd --> /datos/datanode/current/BP-690530888-127.0.0.1-1681608630130/current/finalized/subdir0
+
+19.- Desde la ventana 1, [hadoop@localhost subdir0] --> ls --> cd subdir0/
+
+20.- Desde la ventana 1, [hadoop@localhost subdir0] --> pwd --> /datos/datanode/current/BP-690530888-127.0.0.1-1681608630130/current/finalized/subdir0/subdir0
+
+
+En esta ruta encontramos el "Bloque ID" del archivo que subimos "prueba.txt". Es decir, cuando subimos un archivo a 
+HDFS, lo  trozea en 'bloques' de 128 MB y lo distribuye a lo largo de este directorio. Solo tenemos un 'bloque' dado
+que el archivo pesa 5 KB.
+21.- Desde la ventana 1, [hadoop@localhost subdir0] --> ls --> cd /home/hadoop/Descargas
+
+Tengo que generar un link de descarga para el archivo "access_log.gz" y descargarlo
+22.- Desde la ventana 1, [hadoop@localhost Descargas] --> ls -ltr --> gunzip access_log.gz --> y
+
+Verificamos que se haya descomprimido 
+23.- Desde la ventana 1, [hadoop@localhost Descargas] --> ls -l --> mv access_log /tmp
+
+24.- Desde la ventana 1, [hadoop@localhost Descargas] --> hdfs dfs -put /tmp/access_log /temporal/access_log
+
+Podemos ver los archivos que hemos subido a HDFS y ver la información de 'bloques' de cada uno
+25.- Desde la interfaz gráfica de Hadoop --> https://localhost:9870 --> Utilities --> Browse Directory
+
+E ingresamos a la ruta donde se almacenan los bloques y los visualizamos
+26.- Desde la ventana 1, [hadoop@localhost Descargas] --> cd /datos/datanode/current/BP-690530888-127.0.0.1-1681608630130/current/finalized/subdir0/subdir0 --> ls
+
+27.- Desde la ventana 1, [hadoop@localhost subdir0] --> cd
+
+28.- Desde la ventana 1, [hadoop@localhost ~] --> hdfs dfs -ls /temporal --> hdfs dfs -cat /temporal/prueba.txt
+
+29.- Desde la ventana 1, [hadoop@localhost ~] --> hdfs dfs -mkdir /temporal1 --> hdfs dfs -cp /temporal/prueba.txt /temporal1/prueba1.txt
+
+30.- Desde la ventana 1, [hadoop@localhost ~] --> hdfs dfs -rm /temporal/prueba.txt --> hdfs dfs -get /temporal1/prueba1.txt /tmp/test.txt
+
+31.- Desde la ventana 1, [hadoop@localhost ~] --> cd /tmp
+
+32.- Desde la ventana 1, [hadoop@localhost tmp] --> ls -l tes*
+
+-----------------------------------------------------------------------------------------------------------------------
+HDFS - Algunos comandos de administración
+=========================================
+
+1.- Desde la ventana 1, [hadoop@localhost tmp] --> hdfs dfsadmin --> Lista de comandos de administración
+
+2.- Desde la ventana 1, [hadoop@localhost tmp] --> hdfs dfsadmin -report --> Resumen a nivel global de Hadoop
+
+3.- Desde la ventana 1, [hadoop@localhost tmp] --> hdfs fsck / --> Revisión del sistema de archivos
+
+4.- Desde la ventana 1, [hadoop@localhost tmp] --> hdfs dfsadmin -printTopology --> Nos permite identificar el n° de nodos que tenemos
+										           dentro de la máquina y a que Rack pertenece.
+
+-----------------------------------------------------------------------------------------------------------------------

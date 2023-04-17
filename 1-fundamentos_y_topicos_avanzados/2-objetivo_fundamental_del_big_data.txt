@@ -1,0 +1,12 @@
+OBJETIVO FUNDAMENTAL DEL BIG DATA
+=================================
+
+Aumentar el valor del proceso por medio de:
+
+1. Reducir los tiempos de procesamiento
+2. Integrar todas las fuentes de datos disponibles
+3. Reducir los costos de hardware
+4. Reducir el uso de recursos computacionales
+5. Crecer fácilmente en potencia computacional
+6. Aumentar la exactitud en los cálculos
+7. Potenciar otras tecnologías y marcos de trabajo

@@ -1,0 +1,632 @@
+RESUMEN Y EXPLICACION DEL ARCHIVO "producer-v3.0"
+=================================================
+
+Entonces la sesión del día de hoy el día de hoy vamos a utilizar las 2 herramientas que vivimos en la 
+sesión anterior Kafka y HBase para completar todo un flujo end to end en tiempo real. Ahora, vamos a 
+tener que dar algunos detalles adicionales antes de empezar a implementar nuestra codificación por medio 
+de una Spark Streaming. ¿Cuál era el arquetipo de arquitectura que habíamos definido hasta el momento? 
+vamos a implementar lo siguiente, ya sabemos que hay una fuente de datos de tiempo real y esa fuente de 
+datos va a tener que, vamos a tener que mover los datos de alguna manera desde esa fuente de datos hasta 
+nuestra infraestructura en Kafka. También sabemos que para eso tendremos que crear un tópico en la 
+infraestructura Kafka. 
+                                                 
+                 _____________           ___________________           _________________        
+                |  Fuente de  |         | Client |          |         |  _____________  |       
+                |  datos      |  ---->  | Source | Producer |  ---->  | |_|_|_|_|_|_|_| | 
+                |_____________|         |________|__________|         |_________________|       
+                                                                        Infraestructura           
+                                                                            Kafka                
+
+¿Cómo vamos a mover desde la fuente de datos hacia el tópico Kafka? 
+
+Vamos a tener que implementar 2 piezas de software, una conocida como “Client Source”, ¿cuál es el 
+objetivo del Client Source? el objetivo de este Client Source es conectarse a la fuente de datos y extraer 
+la data. Habíamos dicho que es como hacer el CTRL + C. El otro componente de software que vamos a usar 
+es un “Producer”, que de hecho, vimos en líneas muy generales el código en la sesión anterior, básicamente 
+el “Producer” va a ser el CTRL + V de la data, la va a escribir en el tópico. Por supuesto, la “Fuente 
+de datos” y el “Client Source” es la parte que no se puede arquetipar del todo, es decir, la extracción 
+de los datos de la fuente de datos, porque, va a depender de cuál es esa fuente de datos, si fuese Facebook 
+tendríamos que usar como Client Source el API oficial de Facebook, si fuese Twitter el API oficial de 
+Twitter, si fuese una aplicación Android como Waze que está enviando constantemente el XY de las 
+geolocalizaciones, probablemente el Client Source estaría instalado en el dispositivo Android, estaría 
+hecho sobre Android y estaría extrayendo los XY constantemente. Así que digamos que esa parte es algo 
+variable. 
+                                                INGESTA
+                                             PARALELIZABLE
+                                        _______________________
+                                       |                       | 
+                 _____________         |  ___________________  |         _________________        
+                |  Fuente de  |        | | Client |          | |        |  _____________  |       
+                |  datos      |  ----> | | Source | Producer | | ---->  | |_|_|_|_|_|_|_| | 
+                |_____________|        | |________|__________| |        |_________________|       
+                                       |                       |          Infraestructura           
+                                       |                       |              Kafka    
+                                       |_______________________|
+
+Otro punto importante que tenemos que entender es que esto va a tener que estar sobre una capa de INGESTA 
+PARALELIZABLE, esto ya escapa de los temas de Big data. 
+
+¿A qué nos referimos con Ingesta Paralelizable? 
+
+Vamos a poner algunos números para poder entenderlo. Si te das cuenta esta extracción y escritura de datos 
+hacia Kafka no es un proceso complejo, literalmente es un copiar y pegar datos desde fuente hasta Kafka, 
+solamente que va a ser un copiar y pegar en donde van a estar lloviendo muchos datos, el Storm Data. A nivel 
+de procesamiento esta unidad (Client Source | Producer) casi no hace nada, generalmente ¿qué es lo que se va 
+a hacer? vamos a poner un número para poder entenderlo bien, digamos que esta fuente de datos envía 100.000 
+transacciones por segundo, eso quiere decir que este componente de software (Client Source | Producer) en su 
+memoria RAM durante 1 segundo debería estar en la capacidad de poder soportar estas 100.000 transacciones. 
+Vamos a poner un peso supuesto de cada transacción, supongamos que vienen 100.000 transacciones por segundo 
+y cada una de ellas pesa 1 KB, pequeñísimo, ¿cuánto en total está lloviendo en el componente que va a ser 
+el CTRL + C y CTRL + V? vamos a poner que esto sale 10 MB, no es mucho, 10 MB por segundo, por lo tanto, este 
+programa (Client Source | Producer) debería estar ejecutándose en algún tipo de contenedor que en memoria RAM 
+al menos separe 10 MB. Y en CPU como no está haciendo ningún tipo de procesamiento, por lo general, se le 
+coloca poquísima CPU, por ejemplo, un 10% del tiempo de una CPU, porque, realmente no procesa, solamente hace 
+un movimiento de datos desde la fuente hacia Kafka. 
+
+                          | n° transac. en  1s   | Peso Transaccion | Peso Total x seg. |  
+                    ______|______________________|__________________|___________________|
+                          |                      |                  |                   |
+                       F  |        100.000       |       1 kb       |       10 MB       |   
+                    ______|______________________|__________________|___________________|
+
+Vamos a poner un número más grande para poder hacer un cálculo un poco más real. Digamos que esto sale 100 MB 
+por segundo, 100 MB de memoria RAM es poquísimo. 
+
+                          | n° transac. en  1s   | Peso Transaccion | Peso Total x seg. |  
+                    ______|______________________|__________________|___________________|
+                          |                      |                  |                   |
+                       F  |        100.000       |       1 kb       |      100 MB       |   
+                    ______|______________________|__________________|___________________|
+               
+                                                                                _________________
+                                                INGESTA        .-------------> |                 |
+                                             PARALELIZABLE    /                |  RAM : 100 MB   |
+                                        _____________________/__               |  CPU : 10% CPU  |
+                                       |           _________/   |              |_________________|
+                 _____________         |  ________|__________   |         _________________        
+                |  Fuente de  |        | | Client |          |  |        |  _____________  |       
+                |  datos      |  ----> | | Source | Producer |  | ---->  | |_|_|_|_|_|_|_| | 
+                |_____________|        | |________|__________|  |        |_________________|       
+                                       |                        |          Infraestructura           
+                                       |                        |              Kafka    
+                                       |________________________|
+
+¿Qué es lo que va a pasar en la vida real? nosotros vamos a hacer lo siguiente, sobre esta capa (capa de 
+Ingesta paralelizable) ya tenemos algunos números para poder trabajar, a ver, si vienen 100.000 transacciones 
+de 1 KB cada una, serian 100 MB. ¿CPU? el 10% de una CPU, porque, aquí no procesamos y el no procesar, pues, no 
+tendremos que tener una CPU 100% dedicada a mover los datos, así que hasta ahí estamos bien. ¿Cuál va a ser el 
+problema? que este número de acá (100.000 transacciones) es lo que como desarrolladores estamos esperando, 
+hablemos de un ejemplo real, Facebook, en Facebook quizás estemos scrapeando datos de personajes políticos y 
+digamos, nos hemos conectado a 3000 páginas diferentes y estamos scrapeando la data, pero de pronto hay un 
+escándalo político muy fuerte y las personas van a Facebook y comienzan en cantidad a comentar muchísimo y desde 
+las 9:00 de la mañana hasta las 11:00 de la mañana las personas ya no envían 100.000 transacciones por segundo, 
+si no, que ahora están enviando por este escándalo político 5 veces más de lo esperado, es decir, 500.000 
+transacciones. ¿Qué es lo que puede pasar? nosotros en nuestro componente de ingesta paralelizada, el Client 
+Source y el Producer lo vamos a codificar, una cosa es la lógica de negocio y otra cosa es la RAM y la CPU 
+asignada a esa lógica. Ya sabemos que si son 100.000 transacciones tenemos estos numeritos (RAM: 100 MB y 
+CPU: 10% CPU) asignados para que no colapse, pero ahora viene 5 veces más de lo esperado, ¿qué es lo que vamos 
+a hacer? Obviamente, con estos números ya no vamos a poder atender esas peticiones, lo que se hace es tener un 
+ESCALAMIENTO AUTOMÁTICO DE CONTENEDORES DE PROCESAMIENTO. ¿Qué significa esto? de alguna manera esta capa de la 
+arquitectura de ingesta paralelizada ahora se va a dar cuenta que está viniendo el quíntuple de lo esperado, así 
+que dice: “…de acuerdo, voy a levantar más instancias del programa que está escrapeado, si esto es 5 veces más 
+potente, pues levantaré 5 instancias más y distribuiré la carga de trabajo entre ellas…”. 
+
+                                                                                _________________
+                                                INGESTA        .-------------> |                 |
+                                             PARALELIZABLE    /                |  RAM : 100 MB   |
+                                        _____________________/__               |  CPU : 10% CPU  |
+                                       |           _________/   |              |_________________|
+                 _____________         |  ________|__________   |            _________________        
+                |  Fuente de  |        | | Client |          |  |           |  _____________  |       
+                |  datos      | -------> | Source | Producer |  | ------->  | |_|_|_|_|_|_|_| | 
+                |_____________|        | |________|__________|  |     |     |_________________|       
+                        |              |  ___________________   |     |       Infraestructura           
+                        |              | |        |          |  |     |            Kafka    
+                        '--------------> |        |          | -------'     
+                        |              | |________|__________|  |     |  
+                        |              |  ___________________   |     |  
+                        |              | |        |          |  |     |           
+                        '--------------> |        |          | -------'   
+                        |              | |________|__________|  |     | 
+                        |              |  ___________________   |     |  
+                        |              | |        |          |  |     |           
+                        '--------------> |        |          | -------'   
+                        |              | |________|__________|  |     |  
+                        |              |  ___________________   |     |  
+                        |              | |        |          |  |     |           
+                        '--------------> |        |          | -------'  
+                                       | |________|__________|  |                                       
+                                       |________________________|
+
+Recordemos que aquí lo único que estamos haciendo es conectarnos a la fuente de datos y dejarlo todo en Kafka, 
+en Kafka no va a haber problema porque esta es una infraestructura que como vimos en la sesión anterior está 
+preparada para esa tormenta de datos, ahora lo que estamos resolviendo es el CTRL + C y CTRL + V, el moverlo 
+hacia Kafka. Desde las 9:00 de la mañana hasta las 11:00 de la mañana pasa esto, esta capa de ingesta paralelizable 
+levanta 5 instancias en total y atiende eso. Digamos que desde las 11:00 de la mañana hasta el resto del día las 
+cosas se calman y volvemos nuevamente a lo esperado, a los 100.000 comentarios por segundo, esta capa de ingesta 
+paralelizable se va a dar cuenta de eso y va a eliminar las instancias adicionales que se levantaron. 
+
+¿Qué tipo de tecnologías nos permiten hacer eso? Obviamente, cada uno de estos componentes software instanciados 
+son pequeñísimos en memoria RAM y CPU y también son pequeños en complejidad de lógica de negocio, solo hacen 
+movimiento de datos, por lo tanto, estos componentes software pueden vivir como MICRO-SERVICIOS, eso es lo que se 
+espera hacer para ingestar fuentes de datos en entornos de Big data. La capa de ingesta paralelizable va a tener 
+micro-servicios en donde va a estar el código del Client Source y el Producer. Generalmente, es necesario solo 
+instanciar uno o 2 microservicios con la misma instancia del programa, porque, puede ser que por alguna razón 
+colapsen los componentes de software originales del Clinet Source y Producer, por diversas razones no necesariamente 
+porque la tormenta datos incrementó, simplemente colapsó por alguna razón, tenemos otro componente que está 
+esperando peticiones o también podría pasar que de pronto vienen muchísimas más peticiones, así que también, otro 
+punto importante es que esta capa de micro-servicios (capa de ingesta paralelizable) en donde está nuestro Client 
+Source y nuestro Producer, se recomienda que esté en algún Servicio Cloud, ¿por qué? para tener ELASTICIDAD. Nosotros 
+sabemos que existe un concepto en Big data que se llama ESCALABILIDAD. La evolución de la Escalabilidad es la 
+Elasticidad y ¿qué es la elasticidad? es la escalabilidad automática, si viene 5 veces más de peticiones, pues, 
+necesitamos 5 veces más potencia y se instancia 4 micro-servicios adicionales en nuestra capa de ingesta paralelizable. 
+Digamos que estamos en un entorno dockerizado de AWS en Cloud, ¿cuál es el punto importante? que estas unidades de 
+procesamiento obviamente no son gratuitas, te costarán dinero, vamos a poner que nos cuestan 10 USD por hora. Para 
+nuestra ingesta regular estaríamos gastando 10 USD la hora, pero en el momento en que pasó el escándalo político 
+vamos a necesitar cuatro microservicios adicionales, entonces, entre las 9:00 y las 11:00 de la mañana, pues, para 
+que el servicio no caiga, porque, obviamente el negocio tiene que tener continuidad se van a levantar estas cuatro 
+instancias adicionales. Por tanto, acá estaremos facturando 50 USD la hora, pero está justificado, por esta razón, 
+y luego cuando todo se normalice la capa de ingesta paralelizada se da cuenta de eso y de manera elástica disminuye 
+las instancias que no son necesarias y se borra y nos quedamos solamente con una instancia y seguimos facturando los 
+10 USD la hora. Un último punto importante de la capa de ingesta paralelizable, como esta capa normalmente se encuentra 
+en Cloud, en un servicio de nube, hay que controlar los precios, el número de instancias, para no tener sorpresas en 
+la facturación. ¿Qué podría pasar? digamos que hubo un escándalo terrible, como lo que pasó con esto de la pandemia 
+del coronavirus y todo el mundo se quedó en su casa, se fue a Facebook y los primeros días fue un desastre total a nivel 
+de servidores porque todo el mundo estaba con la incertidumbre comentando en Facebook. Podríamos estar hasta en un 
+escenario extremadamente grande, ¿qué es lo que puede pasar ahí? si decidimos que el servicio Cloud que puede estar en 
+Docker, o sería un clúster Kubernete, ya escaparía de lo que es propiamente Big data, pero esto nos está sirviendo para 
+ver la relación que hay entre ellos, así que sí efectivamente esto es una infraestructura diferente (capa de ingesta 
+paralelizable). De hecho, nosotros no lo vamos a ver, tendríamos que tener al menos 2 cursos diferentes, uno que hable 
+exclusivamente de Cloud, AWS, Azure o Google y el otro en donde hablemos de microservicios, porque esto no lo hace el 
+encargado de Big data, pero tiene que conocer cómo hacerlo, porque, lo que sí va a hacer el encargado de big data es el 
+componente de software “Producer”, que luego en conjunto con los de microservicios lo van a tener que paralelizar en su 
+ingesta sobre algún Clúster de Kubernete, que generalmente está en nube para ser ELÁSTICO. Se le llama ELÁSTICO, porque, 
+puede aumentar o reducir su tamaño en instancias, además, también son unos micro-servicios especiales, porque, son 
+microservicios que el único objetivo que tienen es copiar los datos y pegarlos, no son microservicios que procesan. Esto 
+se utiliza bastante también en IOT. 
+
+Habíamos quedado en esto de la pandemia del coronavirus, todo el mundo en su casa y empezaron a comentar en Facebook en 
+gran cantidad y estamos en un escenario único, algo que nunca se esperó que pasase y de pronto la potencia necesaria para 
+poderatender todo eso se multiplicó por 100, uno podría decir: “…bueno estamos en Cloud así que no hay problema, si ahora 
+necesitamos 100 veces más potencia, pues, la nube se dará cuenta de eso y levantará 100 instancias de nuestro servicio…” 
+esto es correcto, el problema ya escapa de la parte técnica aquí, aquí estaríamos entrando a un problema de presupuesto. 
+Recordemos que estas instancias no corren gratuitamente, cobran dinero, si dejamos que la elasticidad de la ingesta no 
+tenga un límite, podríamos llegar a escenarios donde se instancien muchísimas instancias. Otro escenario que también pasa 
+es que, por ejemplo, alguien está tratando de tumbarte el servicio y está lanzando un ataque de denegación de servicio, 
+que básicamente es enviarte muchísimas conexiones, ¿si estás en nube que podría pasar? pues como es elástico, empezarán a 
+levantar muchas instancias y se te va a comenzar a facturar, si ahora se multiplica por 100, pues obviamente el presupuesto 
+también se va a multiplicar por 100, ya no van a ser 10 USD la hora, ahora van a ser 1000 USD la hora, en 3 horas ya se 
+fueron 3000 USD de presupuesto, solamente para hacer ingesta de datos, ni siquiera estamos procesando. 	Así que el otro 
+punto importante que deben de tener en cuenta para ingestas a entornos Big data es que esta capa elástica tiene que estar 
+limitada y ese límite siempre va a depender del presupuesto máximo, ¿cuánto como máximo estamos dispuestos a gastar en 
+1 hora para hacerlo elástico? a lo más 200 USD, como cada instancia nos cuesta 10 USD, requeriríamos entonces de 20 
+instancias a lo más. Entonces, ¿qué pasa si de pronto vienen más peticiones y se necesita una instancia 21? pues, mala 
+suerte, ya la nube no nos va dar más instancias, porque lamentablemente estamos fuera del presupuesto y el servicio de 
+tiempo real ya no va a atender en el segundo en el cual nosotros tuniemos, si no, habrá lentitud, empezará a degradarse 
+el servicio, porque, ese sería un problema de presupuesto. Esto lo recalco mucho porque en la vida real siempre te van a 
+vender los servicios Cloud que dicen que son elásticos y levantaran las instancias de manera automática y nunca van a 
+mencionar este tipo de detalles y lo he visto muchas veces, cuando se combina esto con Cloud hay bastantes sorpresas en 
+la facturación, así que siempre hay que poner un límite. ¿En un caso on-premise cuál sería la estrategia? la estrategia 
+en sí es la misma, el problema va a ser cómo se implementa a nivel de infraestructura, porque ahí ya no vamos a tener una 
+capa tan elástica como la nube nos la podría dar, ahí nosotros tendríamos que tener una infraestructura dedicada para 
+soportar esa elasticidad y tendría que ser, digamos, una infraestructura de microservicios que esté disponible a toda la 
+empresa y todos apunten y cuando necesiten elasticidad levanten sus procesos ahí, pero administrar ese tipo de 
+infraestructuras dentro de una empresa para una ingesta de Big data es muy complejo, por eso se dice que esta capa se 
+recomienda que esté en Cloud, siempre y cuando vayas a necesitar este tipo de escenarios de ‘Elasticidad’, porque, por 
+ejemplo, si estás ingestando datos de tu propia empresa y eso ya está más controlado, en un Facebook hay cosas que 
+simplemente no se pueden controlar, el número de comentarios, pero dentro de una empresa quizás los procesos están más 
+controlados, así que ahí ya la elasticidad no va a ser tan necesaria o te será necesaria pero con límites bien definidos 
+y ahí podrías levantar tu infraestructura on-premise para que allí vivan tus microservicios y ocupen los servidores según 
+la necesidad, pero en general no lo recomiendo porque administrar una infraestructura elástica on-premise es muy complejo, 
+sale más barato hacerlo en nube, pero de que se puede se puede. 
+
+Si se dan cuenta hay muchísimos detalles aquí, vamos a resumir todo lo que hemos dicho en los importantes. Tenemos una 
+fuente de datos en tiempo real, el objetivo va a ser como primer paso llevarlo a nuestro tópico en nuestro Clúster Kafka. 
+Ese movimiento de datos no se va a hacer porque sí, vamos a implementar 2 piezas de software, la primera conocida como 
+“Client Source” cuyo objetivo es conectarse a la fuente de datos y extraer la data y la segunda conocida como “Producer”, 
+todo eso que hemos extraído lo vamos a ir escribiendo en el tópico. 
+
+Por supuesto, cada una de estas unidades de procesamiento (Client Source | Producer) son muy pequeñitas y van a requerir 
+cantidades de RAM y de CPU pequeñas para que no se facturen mucho, se ponen bien pequeñas obviamente por temas de dinero, 
+de hecho, están menos de 1 USD este tipo de unidades de procesamiento, salen baratísimo, ¿cuál es el problema con esto? 
+que pueden haber escenarios que por alguna razón la fuente de datos en tiempo real empieza a enviar más transacciones, 
+así que por eso se recomienda que estos 2 componentes de software estén en contenedores de microservicios en Cloud, para 
+que si de pronto vienen más peticiones de las que nosotros hemos separado para cada container, el Clúster en nube se dé 
+cuenta de esto y levante más instancias. Solamente para hacer el movimiento de datos. Y finalmente, bueno y también las 
+recomendaciones de presupuesto, porque, hay que poner un límite a la elasticidad, no puede ser completamente libre, si no, 
+hay sorpresas en la facturación. Y finalmente también es necesario entender que este mundo de acá 
+(Fuente de datos | Client Source) es el MUNDO NO BIG DATA por 2 razones: número uno, porque la fuente de datos a la que 
+nos vamos a conectar puede ser muy variable, si estamos escrapeando datos de Facebook hay que llamar al especialista en 
+escrapeo de Facebook, si estamos escrapeando páginas web, hay que llamar al especialista de webscrapping, si por ejemplo 
+estamos ingestando la geolocalización de muchos celulares, tipo Waze o tipo Google Maps que envia tu ubicación en tiempo 
+real, ahí tendríamos que llamar al especialista en Android o en iOS, que haga una aplicación que constantemente te esté 
+enviando los XY. Por eso se dice que esta parte es del MUNDO NO BIG DATA, ahí tenemos que llamar al especialista experto 
+en sacar los datos de la fuente de datos que se está trabajando. El MUNDO BIG DATA empieza desde este punto de aquí 
+(Producer), la implementación del Producer, eso lo va a tener que hacer alguien de Big data. Además, otro rol necesario es 
+quien se va a encargar de colocar los componentes de software en micro-servicios y dependiendo de la nube, si estamos 
+trabajando en AWS, pues, será el experto en micro-servicios sobre AWS o el experto en micro-servicios en Azure, etc. Hay 
+diferentes roles para poder hacer esta ingesta, el experto de la fuente, el big datero que hace el Producer y el experto en 
+micro-servicios según el Cloud que estemos utilizando para poner esto en contenedores de micro-servicios en nube, 3 roles 
+participan en este proceso. Pero una vez que los datos ya aterrizaron en Kafka, ahora sí es completamente el MUNDO DE BIG 
+DATA, por eso se dice que en parte de la arquitectura esto también se conoce como una CAPA DE INTEGRACIÓN o una CAPA DE 
+INTERFAZ. Recordar que en el Data lake nosotros teníamos la zona de LANDING TMP que nos permitía subir todo como texto plano, 
+porque el texto plano literalmente cualquier fuente datos batchera te puede exportar la data en texto plano, algo parecido 
+pasa aquí, esta capa es de integración, porque, ya nos abstraemos de cuál es la fuente de datos y seguimos este patrón de 
+diseño, porque, al final todo aterriza en forma de registros en Kafka y con esto ya tenemos un soporte para la elasticidad. 
+Una vez que ya lo tenemos centralizado en Kafka, ¿qué es lo que vamos a hacer? el siguiente paso es ahora sí hay que procesar 
+esos datos y ahí es donde vamos a utilizar la potencia computacional del Clúster. Gracias a los patrones que estamos 
+recomendando, Kafka ya es el centralizador de todo lo que esté lloviendo y está bien ordenado, ahora lo que tenemos que hacer 
+en nuestro Clúster de procesamiento en Big data es construir una pieza de software llamada “Consumer” que se encargue de 
+conectarse al tópico de Kafka y extraer los datos. 
+
+                                                                   _________________
+                                   INGESTA        .-------------> |                 |
+                                PARALELIZABLE    /                |  RAM : 100 MB   |               
+                           _____________________/__               |  CPU : 10% CPU  |                __________________
+                          |           _________/   |              |_________________|               |   ____________   | 
+    _____________         |  ________|__________   |         _________________           .-----------> | Consumer 1 |  | 
+   |  Fuente de  |        | | Client |          |  |        |  _____________  |          |          |  |____________|  | 
+   |  datos      |  ----> | | Source | Producer |  | ---->  | |_|_|_|_|_|_|_| | ---------|          |   ____________   | 
+   |_____________|        | |________|__________|  |        |_________________|          '-----------> | Consumer 2 |  | 
+                          |                        |          Infraestructura                       |  |____________|  | 
+                          |                        |              Kafka                             |__________________| 
+                          |________________________|                                                       Hadoop
+                                                                                                             
+
+Ya sabemos que este tópico Kafka tiene por estándar un tiempo de vida, si un registro aterriza a las 17:06 de la tarde, ese 
+registro va a estar disponible hasta las 18:06 de la tarde, para que cualquier Consumer lo pueda extraer. Generalmente los 
+Consumer extraen la data que se va a acumulando cada segundo cada segundo o cada 10 segundos, va a depender de negocio y 
+también debemos de recordar que podemos tener diferentes Consumers que extraigan los datos de un mismo tópico, cada uno 
+obviamente con su propia velocidad, cada Consumer puede definir su velocidad de extracción. 
+
+Puntos importantes aquí, y ¿por qué extraer la data cada 10 segundos, si puedo hacerlo cada segundo o no sería mejor extraerlo 
+cada segundo? la respuesta es va a depender de negocio, por ejemplo, tenemos acceso las claves de acceso a diversos sistemas 
+bancarios de la bolsa de valores, nos han dado muchísimos accesos y ya resolvimos la parte de extracción de la data y estamos 
+dejando toda la tendencia de la bolsa en un tópico de Kafka y negocio nos dice: “…mira yo quiero tener un dashboard en donde 
+se pinte la tendencia con 1 minuto de retraso…”. Para negocios eso es tiempo real, no sé pues, el precio del dólar o el precio 
+de las acciones, con 1 minuto de retraso. Si podemos darnos el lujo de tomarnos ese minuto de retraso, porque, para negocio es 
+suficiente con eso, siempre vamos a tratar de extraerlo así, si nos dicen: “…mira yo puedo espera 1 minuto…” pues entonces 
+vamos a hacer la extracción cada minuto. Cada negocio entiende el tiempo real de manera diferente, esto es importante, porque, 
+computacionalmente hablando el Clúster a nivel de paralelización de los algoritmos que implementamos por detrás, va a funcionar 
+mejor mientras más datos le enviemos, así que si te dicen mira yo puedo esperar 1 minuto, en ese Consumer que se extraiga cada 
+minuto, si dicen yo quiero tener una latencia de 1 segundo, por alguna razón, ejemplo clásico, una videollamada, 1 segundo de 
+retraso ahí sí está bien justificado, entonces, ahí el Consumer tendría que hacerlo cada 1 segundo, si queremos un dashboard 
+que se actualice cada minuto, perfecto, pues ponemos un Consumer que extraiga cada 60 segundos. Es importante tratar de ganar 
+el mayor tiempo posible en la extracción. El Consumer solamente tiene el objetivo de extraer los datos y ponerlo en un pequeño 
+archivo, ahora este pequeño archivo de datos es pasado a una unidad de procesamiento y aquí es donde nosotros vamos a procesar 
+los registros de este archivo con todo lo que nosotros ya conocemos. 
+
+¿Cuál es el procesamiento que nosotros vamos a hacer para poner un ejemplo completo? 
+
+Vamos a emular el envío de datos primero (Fuente de datos -> Client Source -> Producer -> Tópico). Luego, vamos a hacer un 
+cambio a diferentes fuentes de datos en tiempo real, para que vean cómo a nivel de código software esto se abstrae completamente 
+de la fuente de datos. ¿Qué es lo que vamos a enviar? esta fuente de datos emulada con la que vamos a trabajar inicialmente, va 
+a enviar el ID de la persona que realiza una transacción, el ID de la empresa en donde se realizó la transacción y el monto de 
+la transacción. 
+
+¿Qué es lo que vamos a hacer a nivel de procesamiento una vez recibidos los datos? 
+
+Vamos a escribir una función que va a aplicarse de manera paralelizable a todos los registros que hayan sido capturados en la 
+tormenta de datos, esa función de entrada, obviamente, va a tomar estos campos del registro y ¿qué es lo que va a hacer? el 
+output va a ser el ID de la persona que hizo la transacción y su nombre, el ID de la empresa que hizo la transacción y el nombre 
+de la empresa y el monto y fecha y hora de la transacción. 
+
+                                                                   _________________
+                                   INGESTA        .-------------> |                 |
+                                PARALELIZABLE    /                |  RAM : 100 MB   |               
+                           _____________________/__               |  CPU : 10% CPU  |                ______________________________________________________
+                          |           _________/   |              |_________________|               |   ____________         ___         _______________   |
+    _____________         |  ________|__________   |         _________________           .-----------> | Consumer 1 | ----> |---| ----> | Procesamiento |  |         
+   |  Fuente de  |        | | Client |          |  |        |  _____________  |          |          |  |____________|       |___|       |_______________|  |      
+   |  datos      |  ----> | | Source | Producer |  | ---->  | |_|_|_|_|_|_|_| | ---------|          |   ____________         ___         _______________   |               
+   |_____________|        | |________|__________|  |        |_________________|          '-----------> | Consumer 2 | ----> |---| ----> | Procesamiento |  |         
+                          |                        |          Infraestructura                       |  |____________|       |___|       |_______________|  | 
+                          |                        |              Kafka                             |______________________________________________________| 
+                          |________________________|                                                                Infraestructura Hadoop
+
+
+Los campos de “nombre de la persona” y “nombre de la empresa” nosotros lo vamos a generar al vuelo. ¿Cómo los vamos a generar? 
+la fecha y hora la vamos a tener de del sistema y el nombre de la persona y el nombre de la empresa que realizó la transacción, 
+la vamos a extraer de una tabla Hbase, vamos a tener una tabla persona y una tabla empresa, vamos a consultar en función del 
+ID persona y nos devolverá en tiempo real el nombre de la persona, en función del ID empresa y en tiempo real nos va a devolver 
+el nombre de la empresa. Con eso estaríamos haciendo un proceso de enriquecimiento de datos, este registro enriquecido para tener 
+un ejemplo completo lo vamos a volver a escribir en una 3era tabla HBase que se va a llamar “TRANSACCION_ENRIQUECIDA”. La 
+diferencia va a estar que esta tabla “TRANSACCION_ENRIQUECIDA” se va a ir llenando en tiempo real, porque, el proceso de 
+extracción de datos desde el tópico, lo vamos a hacer que se ejecute cada segundo y vamos a ver cómo la tabla se va a ir llenando 
+con datos cada segundo. También en un inicio vamos a emular la fuente de datos y de hecho se recomienda en la vida real emular 
+una fuente de datos, porque, hacer este flujo (Fuente de datos -> Client Source -> Producer -> Tópico) toma tiempo y el Big datero 
+hasta que no esté hecho ese flujo no puede empezar su desarrollo. Así que se trabajan con fuentes de datos emulada. Parte del 
+arquetipo que vamos a ver el día de hoy ya tiene una fuente de datos para que ustedes emulen tormenta de datos y qué es lo que 
+vamos a hacer básicamente, le vamos a decir: “…oye quiero que me lluevan 10 transacciones cada segundo o quiero que me lluevan 
+100 transacciones cada 0.1 segundo o quiero que lluevan 1.000 transacciones cada 5 segundos…”. Es importante tener un proceso que 
+emule esa fuente de datos, porque, si no, el Big datero va a tener que esperar a que todo este flujo 
+(Fuente de datos -> Client Source -> Producer -> Tópico) este funcionando y no va a poder comenzar su desarrollo. Así que el 
+arquetipo incluye una emulación y hay algunas reglas que tenemos que respetar para que cuando ya tengamos la conexión real podamos 
+hacer rápidamente el switch desde el Producer y al Client Source que utilizaremos. Finalmente, una vez que hemos mandado los datos 
+a la tabla de TRANSACCION_ENRIQUECIDA y ¿qué pasa si queremos visualizar esta data? lo que vamos a hacer es, como vimos en la 
+sesión anterior, vamos a crear una tabla HIVE por encima de esta tabla Hbase, ¿cuál sería la idea? ya sabemos nosotros que las 
+herramientas de visualización como Tableau, Power BI u otras que existen en el mercado, ya tienen conectores para estas tablas 
+Hive. Hemos dicho que el conector siempre tiene que ser IMPALA y como esta tabla se va a ir llenando cada segundo con nuevos datos, 
+estos ya tienen soporte para pintado en tiempo real, así que, podría pintar la datos en tiempo real, porque, para la herramienta 
+de visualización que utilicemos, para ellos esta tablita  Hbase va a seguir siendo HIVE y por detrás ni cuenta se va a dar que es 
+una tabla de baja latencia. Por supuesto que nosotros vamos a hacer el ejemplo con HUE para poder abstraernos de cualquiera de 
+estos graficadores, pero la lógica va a ser la misma. Vamos entonces a implementar todo este end to end completo. 
+
+Como último punto importante que tenemos que poner aquí es que gracias a que tenemos esta arquitectura podemos abstraernos 
+completamente de muchos detalles, van a ver que el arquetipo que les voy a presentar está enfocado en que los desarrolladores 
+trabajen en el procesamiento, en la lógica de negocio. 
+
+                                                                                                                                                                                            .---> Visualización  
+                                                                   _________________                                   Lógica de Negocio <---- -.                                          /        gráfica
+                                   INGESTA        .-------------> |                 |                                                           |                    Base de datos        /      - HUE             
+                                PARALELIZABLE    /                |  RAM : 100 MB   |        ___                                                |                   _____________________/       - Tableau
+                           _____________________/__               |  CPU : 10% CPU  |       |---|    ___________________________________________|________________  |   _________________/ | ___  - Power BI
+                          |           _________/   |              |_________________|       |___|   |   ____________         ___         _______|________          |  |   Tabla Hive    | |    | 
+    _____________         |  ________|__________   |         _________________           .-----------> | Consumer 1 | ----> |---| ----> | Procesamiento | -------> |  |  _____________  | |    |    
+   |  Fuente de  |        | | Client |          |  |        |  _____________  |          |          |  |____________|       |___|       |_______________|          |  | | Tabla HBase | | |    | 
+   |  datos      |  ----> | | Source | Producer |  | ---->  | |_|_|_|_|_|_|_| | ---------|          |   ____________         ___         _______________           |  | |_____________| | |    |   
+   |_____________|        | |________|__________|  |        |_________________|          '-----------> | Consumer 2 | ----> |---| ----> | Procesamiento |          |  |_________________| |    | 
+                          |                        |          Infraestructura                ___    |  |____________|       |___|       |_______________|          |______________________|    | 
+                          |                        |              Kafka                     |---|   |__________________________________________________________________________________________|         
+                          |________________________|                                        |___|                        Infraestructura Hadoop
+
+Al final eso es lo que importa, este arquetipo que les estoy mostrando, llevar la data del punto A al punto B en tiempo real, 
+la estamos haciendo así no por capricho o porque se vea bonito en una presentación, si no, porque soluciona esa parte molestosa 
+de la tormenta datos, pero eso no agrega valor al negocio, lo que nosotros construyamos en el ‘Procesamiento’ va a agregar valor 
+al negocio, así que hay que tratar de abstraernos completamente de esta parte y tener un arquetipo de código que en la medida de 
+lo posible permita fácilmente adaptarlo a diferentes fuentes de datos. Al final esto es lo que vale más, las reglas de negocio 
+que implementemos.                          
+
+
+Implementación ejercicio
+-------------------------
+
+El Client Source se va a conectar a un archivo que está en HDFS, este archivo tiene muchos registros, el Client Source lo único 
+que va a hacer es extraer algunos registros al azar, por ejemplo, 10 y esos 10 registros son los que por medio del PRODUCER vamos 
+a escribir en el tópico. Esto solamente primero para poder entender. Vamos a utilizar el archivo “transacciones.json”. ¿Qué es lo 
+que tenemos en el archivo transacciones.json? son transacciones que nosotros ya conocemos, el ID de la persona que hizo la 
+transacción, donde se hizo y cuánto dinero tiene esa transacción. Todo esto es un arreglo JSON. La gran mayoría de fuentes de
+datos en tiempo real te van a entregar cadenas JSON, pero en eso vamos a hablar en un momento, por ahora simplemente sabemos que 
+lo que va a hacer este Client Source es conectarse a este archivo y sacar algunos registros al azar. Para eso voy a decir lo 
+siguiente, por ahora no nos va a importar mucho lo que haga esta función primero entendámoslo como un todo, vamos a tener que 
+implementar siempre una función que lea la fuente de datos. 
+
+                __________________________________________________________________________________________________
+               |                                                                                                  |
+               |  import json                                                                                     |
+               |  import random                                                                                   |   
+               |                                                                                                  |   
+               |  --- Lee los datos desde la fuente ---                                                           |
+               |                                                                                                  |
+               |  def readDataFromSource():                                                                       |      
+               |                                                                                                  |
+               |  	with open("/dataset/transacciones.json") as file:    <----------- Leemos el archivo JSON     |
+               |  		jsonDataRead = json.load(file)                                                            |
+               |                                                                                                  |
+               |  	jsonData = random.sample(jsonDataRead, 10)   <---------- Extraemos registros al azar         |
+               |                                                                                                  |
+               |  	return jsonData                                                                              |   
+               |__________________________________________________________________________________________________|
+
+
+En este momento ¿qué es lo que vamos a hacer con esta fuente de datos? vamos a abrir un archivo que está en la ruta 
+“/dataset/transacciones.json” y de ese archivo de manera aleatoria vamos a sacar por ejemplo 10 registros, eso es lo que está 
+haciendo esta pequeña función, todavía no analicemos en detalle, solamente para entender el arquetipo en primer lugar. Simplemente 
+es una función que se conecta a un archivo y obtiene 10 transacciones de manera aleatoria. En esta función “readDataFromSource()” 
+es donde va a estar implementada la lógica del Client Source el que se conecta a la fuente de datos y tendrá la lógica para 
+conectarnos a la fuente de datos y extraer los datos. 
+
+                __________________________________________________________________________________________________
+               |                                                                                                  |
+               |  import json                                                                                     |
+               |  import random                                                                                   |
+               |  import requests                                                                                 |
+               |  from BeautifulSoup import BeautifulSoup                                                         |
+               |                                                                                                  |   
+               |  def readDataFromSource(i):                                                                      |
+               |     #import requests                                                                             |
+               |     response = requests.get("https://www.forosperu.net/secciones/foro-libre.149/pagina-"+str(i)) |
+               |     htmlData = response.text                                                                     |
+               |     #print(htmlData)                                                                             |
+               |     #type(htmlData)                                                                              |
+               |     #                                                                                            |
+               |     return htmlData                                                                              |
+               |                                                                                                  |
+               |  -- Llamamos a la función e imprimimos la página 5 del Foro --                                   |
+               |                                                                                                  |
+               |  dataFromSource = readDataFromSource(5)                                                          |   
+               |  print(dataFromSource)                                                                           |   
+               |__________________________________________________________________________________________________|
+
+
+Este sitio es un foro en donde las personas crean temas y digamos que lo que queremos hacer es empezar a ingestar cada una de 
+estas páginas del foro. Podemos navegar por medio de esta url y bajarnos cada página web y de alguna manera navegar por los https 
+y extraer los títulos para ver de qué está hablando la gente luego por medio de un análisis de ‘Text mind’, por ejemplo. 
+¿Cómo podríamos hacer eso? En el ejemplo lo estamos haciendo una manera simple, hay una librería que me permite conectarme a una 
+página web, descargar la data y obtener el contenido de esa página web, solamente que la función “readDataFromSource()” va a 
+requerir, obviamente, el número de la página, la página 4, la página 5, etc. Así que la función tendría que recibir un parámetro 
+“i”. 
+
+Podríamos imprimir así distintas páginas sucesivamente y se nos devolverá la estructura HTML de cada una. De alguna manera podemos 
+ir enviando todos estos textos a Kafka, para ir acumulándolos y luego con Spark Streaming extraerlos y hacerles algo, navegar por 
+las etiquetas HTML, por ejemplo. Digamos que no quiero que el Client Source ingeste páginas web, sino, que quiero conectarme a 
+una API REST.
+
+                __________________________________________________________________________________________________
+               |                                                                                                  |
+               |  import json                                                                                     |
+               |  import random                                                                                   |
+               |  import requests                                                                                 |
+               |                                                                                                  |
+               |  --- Lee los datos desde la fuente ---                                                           |               
+               |                                                                                                  |   
+               |  def readDataFromSource():                                                                       |       
+               |     #import requests                                                                             |
+               |     #import json                                                                                 |
+               |     response = requests.get("http://api.open-notify.org/iss-now.json")                           |
+               |     jsonData = json.loads(response.content)                                                      |
+               |     #print(jsonData)                                                                             |   
+               |     #type(jsonData)                                                                              |
+               |     #                                                                                            |
+               |     return jsonData                                                                              |
+               |                                                                                                  |
+               |  -- Llamamos a la función e imprimimos la página 5 del Foro --                                   |
+               |                                                                                                  |
+               |  dataFromSource = readDataFromSource()                                                           |   
+               |  print(dataFromSource)                                                                           |   
+               |__________________________________________________________________________________________________|
+
+
+Hay una URL de una API REST pública que básicamente te dice qué hora es en este momento según la longitud y latitud. Cada vez que 
+tu consultas cambia su valor y devuelve una cadena JSON. Vamos a escrapearlo. Por ejemplo, para ir guardando los valores que está 
+API REST nos va ir entregando. La lógica es la misma, en la función “readDataFromSource()” tendríamos que implementar la lógica 
+para hacer eso. Esta forma es la más simple de consumir un API REST con la librería “requests” de Python. 
+
+¿Cuál sería la idea? si te das cuenta, independientemente de lo que estemos escrapeando, la idea es que esté encapsulado en una 
+función que cada cierto tiempo se esté ejecutando. En el caso del scraping de la página web cambia un poquito. Básicamente el 
+punto es el mismo, hay una función “readDataFromSource()” que se va a conectar a la fuente de datos para extraer los datos y te 
+los va a devolver en una variable, ya tenemos la data extraída. Esta función es la pieza de software conocida como el “CLIENT 
+SOURCE”, que como mínimo tiene que tener una función llamada “readDataFromSource()” y esta función puede ser todo lo compleja que 
+tú quieras, aquí es donde se resuelve el tema de la conexión, el escrapeo de los datos en tiempo real de la fuente de datos. 
+
+¿Qué es lo que se hace en la vida real al momento de desarrollar para Big data? 
+
+Las lógicas que hemos estado viendo son simples. En la vida real no va a ser tan simple como esto, hay cuestiones de seguridad, 
+de tokens, del acceso al API REST en tiempo real que queremos acceder y mientras más compleja sea la fuente de datos en tiempo 
+real, más complejo va a ser el código, pero al final está encapsulado según el arquetipo en esta función y te lo va a entregar en 
+una variable. Hasta que el equipo encargado del scrapeo resuelva eso pueden pasar varias semanas, así que en la vida real lo que 
+se hace es tener una función emulada, como esta de aquí:
+
+                __________________________________________________________________________________________________
+               |                                                                                                  |
+               |  import json                                                                                     |
+               |  import random                                                                                   |   
+               |                                                                                                  |   
+               |  --- Lee los datos desde la fuente ---                                                           |
+               |                                                                                                  |
+               |  def readDataFromSource():                                                                       |      
+               |                                                                                                  |
+               |  	with open("/dataset/transacciones.json") as file:    <----------- Leemos el archivo JSON     |
+               |  		jsonDataRead = json.load(file)                                                            |
+               |                                                                                                  |
+               |  	jsonData = random.sample(jsonDataRead, 10)   <---------- Extraemos registros al azar         |
+               |                                                                                                  |
+               |  	return jsonData                                                                              |   
+               |__________________________________________________________________________________________________|
+
+
+En la cual vamos a tener un archivo de datos con algunos registros de ejemplo, de qué es la data que nos va a devolver la fuente 
+de datos y de alguna manera para soportar la tormenta de datos vamos a tener parametrizado el número que indique cuántos registros 
+de ejemplo queremos extraer, digamos que solamente por 10 por segundo, perfecto, tenemos entonces un archivo con muchas 
+transacciones de ejemplo que los de scraping nos tienen que pasar y acá decimos solamente queremos 10. Ya con eso nos hacemos 
+completamente independiente del equipo de scrapping, ya que, ellos pueden tardarse las semanas que necesiten, nosotros queremos 
+solo algunas transacciones de ejemplo para hacer nuestro flujo y por supuesto tenemos que tener una forma de poder manipular la 
+cantidad de transacciones que van a llover en la tormenta de datos, quizá no son 10, quizás 50 transacciones. De esta manera 
+puedes emular una fuente de datos en tiempo real sin esperar a que el equipo de scrapping termine, porque quién sabe cuánto se 
+demoren. Vamos a dejarlo con 10 transacciones. Ahora, vamos a imprimir el tipo de datos que en Python lo podemos obtener por 
+medio de la función “type”. 
+
+                                           ____________________________________________________
+                                          |                                                    |   
+                                          |  #Obtenemos los datos de la fuente                 |
+                                          |  dataFromSource = readDataFromSource()             |
+                                          |                                                    |
+                                          |  print(dataFromSource)                             |   
+                                          |  type(dataFromSource)  # list                      |
+                                          |                                                    |   
+                                          |  print(dataFromSource[0])                          |
+                                          |  type(dataFromSource[0])  # dict (es un json)      |
+                                          |                                                    |
+                                          |  print(dataFromSource[0]['ID_EMPRESA'])  # 10      |
+                                          |  type(dataFromSource[0]['ID_EMPRESA'])   # int     |   
+                                          |____________________________________________________|
+
+
+¿Por qué es importante entender esto? Kafka solamente soporta “strings encodeados en binario”, no soporta “array list”, no 
+soporta “diccionarios”, Kafka todo lo ve como “strings en binario”, así que el segundo paso, una vez que ya se extrajo la data 
+de la fuente de datos es tener una función que formatee la data al tipo de dato esperado por Kafka. Una función estándar llamada 
+“convertDataToFormatProducer(data)”, en otras palabras convertir los datos al formato esperado por el Producer para que pueda 
+escribir en Kafka y Kafka solamente te acepta valores de “string encodeados en binario”.
+
+ _____________________________________________________________________________________________________
+|                                                                                                     |
+|  -- Convierte los datos obtenidos de la fuente en un formato escribible en el producer (string) --  |
+|                                                                                                     |      
+|  def convertDataToFormatProducer(dataFromSource):                                                   |
+|	                                                                                                   |   
+|  	dataFormatted = json.dumps(dataFromSource)  <---- Convertimos los datos a string                |
+|                                                                                                     |
+|  	return dataFormatted                                                                            |
+|_____________________________________________________________________________________________________|
+
+
+¿Qué va a recibir como entrada? va a recibir la data, “dataFromSource”, la data que la fuente de datos me envió, que quién sabe 
+en qué tipo este. Vamos a convertir eso a una cadena de caracteres, ¿cómo lo hacemos para el caso de jsons? para el caso de json 
+existe una librería que tiene Python que permite convertir un ‘array list’ de json en una cadena de caracteres.
+
+                   ____________________________________________________________________________________
+                  |
+                  |  def readDataFromSource():
+                  |
+                  |  	with open("/dataset/transacciones.json") as file:
+                  |  		jsonDataRead = json.load(file)
+                  |
+                  |  	jsonData = random.sample(jsonDataRead, 10)
+                  |
+                  |  	return jsonData
+                  |                                                                                   |
+                  |                                                                                   |
+                  |  def convertDataToFormatProducer(dataFromSource):                                 |   
+                  |                                                                                   |   
+                  |  	dataFormatted = json.dumps(dataFromSource)                                    |   
+                  |                                                                                   |
+                  |  	return dataFormatted                                                          |
+                  |                                                                                   |
+                  |                                                                                   |
+                  |  dataFromSource = readDataFromSource()                                            |
+                  |  print(dataFromSource)                                                            |
+                  |  type(dataFromSource)                                                             |
+                  |                                                                                   |
+                  |  -- Convertimos los datos a un formato compatible con KAFKA (string)--            |
+                  |  -- Convertir los datos al formato que el PRODUCER tiene que tener para enviarlo  |
+                  |  -- Tiene que ser una cadena de caracteres --                                     |
+                  |  dataFormatted = convertDataToFormatProducer(dataFromSource)                      |   
+                  |  print(dataFormatted)                                                             |   
+                  |  type(dataFormatted)  # str                                                       |   
+                  |___________________________________________________________________________________|
+
+
+Para efectos prácticos es lo mismo, pero ahora ya no es del tipo “list”, si no, del tipo “string”, eso ya lo podemos escribir 
+en Kafka. Este string luego ya lo vamos a encodear a binario pero ya es un string, es una cadena de caracteres, porque, Kafka 
+solamente conoce eso, string de datos. Así como HDFS solamente había archivos y en un archivo puede haber lo que sea, en Kafka 
+también pasa algo parecido, en una cadena de caracteres puedes poner lo que sea, un json, una página web, un xml,  una grabación 
+de vídeo en streaming que se está enviando, etc. pero ya es una cadena de caracteres. Una vez que ya tenemos los datos con el 
+formato correcto, tenemos todo listo para escribir este string de datos en nuestro tópico Kafka y eso se hace por medio de una 
+función que nosotros ya conocemos:
+
+ _____________________________________________________________________________________________________________________
+|                                                                                                                     |  
+|  -- Escribe los datos obtenidos en el producer --                                                                   |  
+|                                                                                                                     |  
+|  def writeDataToTopic(dataFormatted):                                                                               |  
+|                                                                                                                     |  
+|  	producer = KafkaProducer(bootstrap_servers="10.0.0.4:9092")  <----- Instanciamos la conexión al servidor KAFKA  |  
+|                                                                                                                     |  
+|  	producer.send("topic_transaccion", dataFormatted.encode()) <----- Preparamos el envío de los datos al tópico    |  
+|                                                                                                                     |     
+|  	producer.flush()  <----- Envíamos los datos al tópico                                                           |   
+|                                                                                                                     |  
+|                                                                                                                     |  
+|  -- Escribimos los datos en el Producer --                                                                          |  
+|  writeDataToTopic(dataFormatted)                                                                                    |     
+|_____________________________________________________________________________________________________________________|
+
+
+Escribir los datos al tópico que va a recibir de entrada la data formateada, instanciamos el Producer que ya sabemos que se 
+conecta a este servidor de Kafka, la data la tenemos que encodear a binario, porque, el string ya sabemos que tiene que ir como 
+binario, y le decimos que queremos escribir esos datos en este tópico. 
+
+ ____________________________________________________________________________________________________________
+|                                                                                                            |     
+|  Estos son los 3 pasos como mínimo que tenemos que hacer para engestar y enviar datos de manera correcta.  | 
+|____________________________________________________________________________________________________________|

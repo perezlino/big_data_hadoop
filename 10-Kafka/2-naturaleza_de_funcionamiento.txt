@@ -1,0 +1,82 @@
+NATURALEZA DE FUNCIONAMIENTO
+============================
+
+El patrón "Publicador / Suscriptor"
+-----------------------------------
+
+¿Cuál es la naturaleza de funcionamiento? realmente en esencia van a ver que los comandos al igual que en HBase 
+son simples, no hay mucho que saber a nivel de sintaxis, lo que hay que saber es saber cómo utilizar estos comandos, 
+por ejemplo, ya sabemos que Kafka implementa el patrón “Publicador/Suscriptor” donde hay un componente “Publicador” 
+que envía mensajes, los mensajes se van encolando y van a ver diferentes “Suscriptores” que van a extraer esos 
+mensajes en pequeños lotes, cada uno definirá sus propios tiempos de extracción, y ya sabemos que estos mensajes 
+viven por estándar 1 hora para poder facilitar los cálculos de reserva de RAM en el Clúster. 
+
+
+El patrón publicador/suscriptor en Kafka
+----------------------------------------
+
+En el caso de Kafka, Kafka solamente gestiona los tópicos. Kafka no se encarga de implementar los PRODUCERS y los 
+CONSUMERS, para eso vamos a tener que utilizar algún lenguaje de programación. Kafka solamente lo vamos a usar 
+literalmente para hacer un CREATE TOPIC y se acabó y ya en algún lenguaje de programación tenemos que hacer el 
+PRODUCER y en otro componente de software el CONSUMER, pero Kafka te da unas consolas de prueba para ver si has 
+creado nuestro tópico y van a ver que en esta clase vamos a crear desde consola un PRODUCER de prueba y un CONSUMER 
+de prueba para verificar que nuestro tópico haya sido bien creado.
+
+
+Integrando sistemas real time con Kafka
+---------------------------------------
+
+Si conoces de buses de datos empresariales, porque los buses de datos empresariales, esto ya sale fuera del tema 
+de big data, existen de toda la vida, desde los años 80 y permiten la interconexión entre diferentes sistemas. 
+Kafka también lo puedes usar como un bus de datos empresarial para interconectar los diferentes sistemas en tiempo 
+real, solamente que Kafka está basada en tecnologías de Big data y vas a poder aprovechar todo lo que te ofrece 
+big data.
+
+
+Kafka funciona sobre un clúster
+-------------------------------
+
+Acá tenemos un Clúster de infraestructura dedicado a Kafka. El tópico que nosotros creemos para nuestras fuentes de 
+datos en tiempo real, recordemos esto va a soportar la tormenta de datos, el PRODUCER le va a enviar datos, el tópico 
+va a vivir en esta infraestructura, específicamente en la memoria RAM. 
+
+
+Anatomía de un tópico
+---------------------
+
+¿Cómo va a vivir? de manera particionada, recordemos que quizá el servidor 1 ya tenga la RAM llena, entonces la RAM 
+tendrá que separarse de algún otro servidor, pero ya para el desarrollador eso es completamente transparente. Si de 
+pronto la RAM ya está saturada en un Server, pues Kafka buscará otros servidores en donde seguir escribiendo los 
+mensajes que vayan llegando desde el PRODUCER. Por suerte, hay un estándar, así como en HDFS se replicaban los datos 
+3 veces, algo parecido pasa aquí, el tópico va a estar particionado en 3 servidores diferentes, pero una cosa son las 
+particiones que te permiten balancear y los mensajes en servidores diferentes y otra cosa es la replicación. ¿Qué es 
+lo que podría pasar? que el servidor 1 colapse, estaremos perdiendo un 33% de los datos capturados, así que cada 
+partición de nuestro tópico tiene que tener una copia adicional en otro servidor, una replicación, de esa manera si 
+colapsa un server tienes una copia en memoria RAM de esa partición de tópico en otro servidor. 
+
+
+Tolerancia a fallos
+-------------------
+
+También hay un estándar para esto. el factor de replicación es un x 2 (por 2) y el factor de particionamiento del 
+tópico es un x 3 (por 3) para que estén 3 servidores diferentes y el factor de replicación es un por 2, no hay otra 
+regla que hacer ahí, a menos que estés en un Clúster del tamaño de Facebook que ya es un Clúster descomunalmente grande, 
+ahí tendríamos técnicas muchísimo más avanzadas para calcular el número de particiones y réplicas, pero en incluso en 
+los grandes bancos que son los que manejan muchísimos datos, esto en la gran mayoría de casos va a ser suficiente, este 
+estándar, 3 particiones y 2 réplicas. En código van a ver qué es un número que tenemos que colocar.
+
+
+Clúster dedicado
+----------------
+
+El otro punto que tienen que entender también de Kafka es que requiere de infraestructura dedicada, porque ya sabemos 
+que estos tópicos viven en memoria RAM y por lo tanto van a consumir la memoria RAM de manera permanente, nunca se van 
+a liberar, así que hay que tener un Clúster de infraestructura dedicado a Kafka y un Clúster dedicado al procesamiento, 
+que deberán de ser servidores físicamente diferentes, para no restarle la memoria RAM de procesamiento al Clúster 
+principal, porque si no ahí ya vendrán muchos problemas, porque los Clústers de procesamiento (Clúster Hadoop) tienen un 
+gestor de recursos (YARN) que está orientado al procesamiento y los Clústers Kafka tienen otro gestor de recursos que 
+está dedicado a la tormenta de datos, son objetivos diferentes y por lo tanto sus gestores de recursos están optimizados 
+de manera diferente, así que infraestructura separada para no complicarnos. ¿Podría instalar Kafka en los servidores que 
+tengo en infraestructura?, sí, pero ahí van a haber 2 gestores de recursos que van a estar compitiendo por la misma 
+potencia computacional y eso es peligrosísimo, porque podemos caer en el pseudo-paralelismo, así que infraestructura 
+dedicada para no complicarnos. 

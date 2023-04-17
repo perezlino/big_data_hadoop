@@ -1,0 +1,28 @@
+HADOOP
+======
+
+==> Para ponerlo en terminos simples, lo que hace HADOOP
+    es que veamos a los servidores de un Cluster (la suma
+    de los recursos computacionales de cada servidor del
+    Cluster) como una 'gran super-computadora'.
+
+Es un framework implementado en Java que permite el 
+almacenamiento y procesamiento distribuido de grandes 
+conjuntos de datos estructurados, semi-estructurados y no 
+estructurados. Está diseñado para trabajar en clústers con 
+miles de máquinas y tiene una alta tolerancia a fallas.
+
+==> HADOOP nos permite gestionar la infraestructura de un 
+    Cluster de BIG DATA
+
+---------------------------------------------------------------------------------------------------------------- 
+
+OBJETIVO FUNDAMENTAL DE HADOOP
+==============================
+
+1.- Almacenar archivos de manera distribuidos[HDFS]
+    ---------
+2.- Procesar archivos de manera distribuida [YARN + MAPREDUCE]
+    --------
+
+---------------------------------------------------------------------------------------------------------------- 

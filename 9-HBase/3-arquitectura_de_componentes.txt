@@ -1,0 +1,9 @@
+ARQUITECTURA DE COMPONENTES
+===========================
+
+¿Cuál es la arquitectura de componentes? HBase como está sobre Hadoop, se dibuja encima de HDFS, ya que, Hbase hace 
+uso de los discos duros de HDFS. ¿Cuál es una alternativa a Hbase? por ejemplo, CASSANDRA, pero si tuviéramos Cassandra 
+en nuestra arquitectura de componentes tendríamos que dibujarla por fuera, porque, Cassandra va a requerir una 
+infraestructura de discos duros dedicada, no la misma que está utilizando HDFS. Así que HBase va encima de HDFS. Si tu 
+Hadoop tiene 1000 TB de disco duro, desde el día uno vas a poder aprovechar esos 1000 TB de disco duro para almacenar 
+datos en tiempo real. 

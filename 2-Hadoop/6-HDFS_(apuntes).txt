@@ -1,0 +1,353 @@
+APUNTES HDFS
+==============
+
+Analizar archivos o directorios
+-------------------------------
+                 ____________________________________________________________________
+                |                                                                    |                                           
+                |       drwxr-xr-x 3 alfonso alfonso 4096 Jan  8 13:55 airflow       |
+                |____________________________________________________________________|
+
+DESCRIPCION
+ 
+  1    2     3     4
+| d | rwx | r-x | r-x |  ==> Se divide en 4 partes
+
+Parte 1 ==>  Si es una d : es un directorio
+             Si es un - : es un archivo (imagen, archivo cualquiera) 
+
+Parte 2 ==>  Los archivos pueden ser Readable(r), Writable(w) o Executable(x).
+             Los tres primeros caracteres se refieren al owner del archivo y nos están 
+             diciendo que el owner puede leer escribir y también ejecutar el archivo.
+
+Parte 3 ==>  Los segundos tres caracteres se refieren al "grupo" al que está asignada 
+             esta carpeta, a los usuarios que pertenecen a este grupo. Y nos están 
+             diciendo que esta carpeta es del grupo "Alfonso", pueden leer esta carpeta (r). 
+             No pueden escribir esta carpeta. De hecho, no hay una (w) aquí, sólo hay una 
+             línea. Y pueden ejecutar el archivo (x).       
+
+Parte 4 ==>  Y el tercer grupo de tres caracteres nos dicen que se refieren a todos los 
+             demás. Así que todos los demás no era el propietario y tampoco es usuario del 
+             grupo "Alfonso". Por lo tanto, todos los demás pueden leer este archivo (r). 
+             No pueden escribir en este archivo, pero pueden ejecutar (x).   
+
+3 alfonso alfonso 4096 Jan  8 13:55 airflow  
+
+3       ==>  Es el número de archivos que se encuentran en este directorio.
+
+alfonso ==>  Este es el owner. Significa que esta carpeta pertenece a 'Alfonso'.   
+
+alfonso ==>  Es el grupo al que está asignada esta carpeta de aplicación. Cada archivo o 
+             directorio se asigna a un Grupo que contiene uno o más usuarios.
+
+4096    ==>  Nos indica el peso del directorio en este caso.   
+
+Jan  8 13:55  ==>  Fecha de modificación del recurso
+
+airflow ==>  Nombre del recurso
+
+             
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 --> 00:40:00
+---------------------
+
+Nos explica que los directorios que se visualizan en MobaXterm, si buscamos 
+los directorios de la raiz (root), seran directorios que pertenecen al Disco 
+duro del servidor GETWAY. Sin embargo, al ingresar al sitio de 'HUE' y buscar 
+los directorios de la raiz (root) podemos visualizar directorios distintos, 
+ya que, estos pertenecen a los discos duros de los servidores SLAVE, es decir,
+al 'Gran disco duro virtual'.
+
+                     
+Buscar 🔎: /        _______________________________________
+                    |            |            |            |       ______\  Recordar que son varios servidores SLAVE, 
+- Directorio A      |   GETWAY   |   MASTER   |    SLAVE   |      |      /  y gracias a Hadoop lo podemos ver como un  
+- Directorio B      |____________|____________|____________|      |         'gran unico servidor', un 'gran unico
+- Directorio C      |            |            |            |      |          computador', un 'gran disco duro virtual'.
+- Directorio D      |  _______   |            |  _______   |      |     
+|              |    | |     ○ |  |            | |     ○ |  |      |         Desde el sitio de 'HUE':
+|______________|    | |       |  |            | |       |---------'         Buscar 🔎: /
+       |            | |_______|  |            | |_______|  |                
+       |            |     ˄      |            |            |                - Directorio E
+       |__________________|      |            |            |                - Directorio F
+                    |            |            |            |                - Directorio G
+                    |____________|____________|____________|                - Directorio H
+Esto es lo que vemos
+en MobaXterm al                                                              Vemos directorios distintos a los que estamos   
+momento de conectarnos.                                                      visualizando desde MobaXterm. Esto porque, los
+Estos directorios                                                            directorios pertenecen al Disco duro de los servidores               
+pertenecen al Disco                                                          Esclavos.
+duro, del servidor
+GETWAY.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 =====> COMANDOS PARA LISTAR ARCHIVOS
+-------
+
+hdfs dfs -ls /	  :   Lista todos los archivos y directorios para la ruta 'root' o 'raiz'. HDFS es un sistema de 
+                      archivos, por lo tanto tiene una carpeta raíz (/) donde se encuentran todas sus otras carpetas
+
+hdfs dfs -ls -h / :   Lista los archivos con su tamaño en formato legible. Se especifican las unidades de Kilobytes (K), 
+                      Megabytes (M) y Gigabytes (G)
+
+hdfs dfs -ls -R / :   Lista todos los archivos y directorios recursivamente (con subdirectorios).
+
+hdfs dfs -ls /file* :   Lista todos los archivos que cumplen el patrón (archivos que comienzan con ‘file’)
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 =====> COMANDOS PARA LEER Y ESCRIBIR ARCHIVOS
+-------
+
+hdfs dfs -text /hadoop/app.log	:  Imprime el archivo en modo texto por la terminal
+
+hdfs dfs -cat /hadoop/app.log	:  Muestra el contenido del archivo en la salida estándar. Visualizamos TODO EL CONTENIDO 
+                                   del archivo especificado por consola.
+
+hdfs dfs -tail /hadoop/archivo  :  Muestra los últimos registros de un archivoNos va a permitir solo visualizar la 
+                                   "cola" del archivo, es decir, solo visualizar sus últimos registros.
+
+hdfs dfs -appendToFile /home/file1 /file2   : Añade el contenido del archivo local 'file1' al archivo en hdfs 'file2'
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 =====> COMANDOS PARA CARGAR Y DESCARGAR ARCHIVOS
+-------
+
+hdfs dfs -put /home/file1  /hadoop    :  Copia el archivo 'file1' del sistema de archivos local (Getway) a hdfs
+
+hdfs dfs -put -f /home/file1 /hadoop  :  Copia el archivo 'file1' del sistema de archivos local a hdfs y lo 
+                                         sobreescribe en el caso de que ya exista
+
+hdfs dfs -put -l /home/file1 /hadoop  :  Copia el archivo 'file1' del sistema de archivos local a hdfs. Fuerza 
+                                         replicación 1 y permite al DataNode persistir los datos de forma perezosa.
+
+hdfs dfs -put -p /home/file1 /hadoop  : Copia el archivo 'file1' del sistema de archivos local a hdfs. Mantiene los 
+                                        tiempos de acceso, de modificación y propietario original.
+
+hdfs dfs -get /hadoopfile1 /home/     :   Copia el archivo 'file1' de hdfs al sistema de archivos local   
+
+hdfs dfs -moveFromLocal /home/file1 /hadoop   :  Copia el archivo ‘file1’ del sistema de archivos local a hdfs y 
+                                                 luego lo borra del sist. archivos local.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 =====> COMANDOS PARA GESTION DE ARCHIVOS
+-------
+
+hdfs dfs -cp /hadoop/file1 /hadoop1    :  Copia el archivo al directorio destino en hdfs
+
+hdfs dfs -cp -p /hadoop/file1 /hadoop1 : Copia el archivo al directorio destino en hdfs conservando tiempos 
+                                         de acceso y de modificación, propietario y modo
+
+hdfs dfs -rm -f /hadoop/file1          :  Elimina el archivo 'file1' de hdfs y lo envía a la papelera.
+
+hdfs dfs -rm -r -f /hadoop             :  Eliminar un directorio. También podemos utilizarlo para eliminar 
+                                          archivos. 
+
+hdfs dfs -touchz /hadoop/archivo_vacio :  Crea un archivo en hdfs con tamaño 0. A pesar que el archivo es un 
+                                          archivo vacio se generan 3 copias.
+
+hdfs dfs -mkdir /hadoop/directorio_nuevo   :  Crea un directorio en hdfs. Nos permite crear un nuevo directorio, 
+                                              siempre y cuando la ruta previa a este nuevo directorio exista.
+
+hdfs dfs -mkdir -p /hadoop/directorio_nuevo1/directorio_nuevo2/.../archivo   : Nos garantiza que creara toda la 
+                                                                               estructura intermedia de directorios, 
+                                                                               no solamente el ultimo directorio.
+
+hdfs dfs -mv /hadoop/directorioA/archivo  /hadoop/directorioB   :  Mover un archivo entre directorios
+
+hdfs dfs -chown <nuevo_usuario>:<nuevo_grupo> /<ruta_directorio_o_archivo> :  Cambiar el owner de un directorio o archivo.
+                                                                              Para utilizar este comando, debemos estar 
+                                                                              logeados con el super usuario ‘hdfs’.
+
+hdfs dfs -chown -R <nuevo_usuario>:<nuevo_grupo> /<ruta_directorio_o_archivo> :  Cambiar el owner de un directorio o 
+                                                                                 archivo de manera recursiva. Esto nos 
+                                                                                 permite cambiar todos los archivos y 
+                                                                                 subdirectorios dentro del directorio 
+                                                                                 especificado.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 --> 00:48:30
+--------------------
+
+¿Como navegamos por los archivos del gran disco duro virtual (nodos SLAVE)
+utilizando MobaXterm?
+
+Utilizando el prefijo 'hdfs dfs' ===> Por ejemplo, para listar los archivos 
+utilizamos:
+                      ______________________________
+                     |                              |    
+                     |      hdfs dfs -ls /ruta      |
+                     |      hdfs dfs -ls -h /ruta   |
+                     |______________________________|
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 --> 00:51:39
+--------------------
+
+Solo los archivos tienen copias, NO LOS DIRECTORIOS. Esto porque un 'Directorio' es METADATA,
+no ocupa espacio en Disco duro, asi que solamente se hacen replicas de los archivos.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 --> 01:14:54
+--------------------
+
+Para cargar un archivo que se encuentre en el 'Disco duro Getway' (Disco local) al 'Disco duro Slave' 
+(HDFS), debemos utilizar el siguiente comando:
+
+                      ________________________________________________
+                     |                                                |    
+                     |      hdfs dfs -put /home/archivo  /hadoop      |
+                     |________________________________________________|
+
+Cargamos el archivo “archivo” que se encontraba en el disco duro Getway, mas específicamente en la 
+ruta /home/archivo, en la ruta del disco duro Slave, mas específicamente en el directorio /hadoop. 
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 --> 01:22:20
+        --> 01:27:40
+--------------------
+
+Otro punto importante es la PAPELERA DE RECICLAJE DE LOS SISTEMAS DE ARCHIVOS DISTRIBUIDOS, ya sea, en 
+HDFS, DBFS, S3 o con cualquier sistema on-premise o en la nube, al momento de que se elimine algo, eso 
+NO SE ELIMINA DE MANERA PERMANENTE, sino que se va a una especie de papelera de reciclaje. 
+
+Para eliminar y enviar un archivo a Papelera de reciclaje utilizamos el siguiente comando:
+
+                      ___________________________________________
+                     |                                           |    
+                     |      hdfs dfs -rm -f /hadoop/archivo      |
+                     |___________________________________________|
+
+Luego el archivo será enviado a la ruta de la Papelera de reciclaje:
+                      _____________________________________________________________________
+                     |                                                                     |    
+                     |      hdfs://........./user/hdfs/.Thrash/Current/hadoop/archivo      |
+                     |_____________________________________________________________________|
+
+
+==> "/user" : es la ruta con el usuario con el que estamos logeados. Esto quiere decir que al estar 
+              logeados con nuestro usuario, vamos a tener NUESTRA PROPIA Papelera de reciclaje.
+
+==> "/.Thrash" : Los archivos y directorios ocultos sobre Linux siempre comienzan con un '.' (un punto).
+                 En HDFS tambien es lo mismo, pero va a depender de la configuracion del Cluster. En la
+                 gran mayoria de casos esta desactivado, es decir, que al momento de crear archivos y 
+                 directorios ocultos los vamos a poder ver.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 2 --> 01:35:02
+--------------------
+
+Eliminar el CONTENIDO de la Papelera de reciclaje con el siguiente comando:
+                      ___________________________________________________
+                     |                                                   |    
+                     |      hdfs dfs -rm -r -f /user/hdfs/.Thrash/*      |
+                     |___________________________________________________|
+
+Para realizar un BORRADO PERMANENTE sin pasar por Papelera de reciclaje lo realizamos con el siguiente
+comando:
+                      ________________________________________________________
+                     |                                                        |    
+                     |      hdfs dfs -rm -r -f -skipTrash /hadoop/archivo     |
+                     |________________________________________________________|                     
+
+---------------------------------------------------------------------------------------------------------------- 
+   
+Clase 3 --> 00:29:00  =====>  VERIFICACION DE INTEGRIDAD DE LOS DATOS  
+--------------------                   
+
+
+Al momento de subir los archivos tenemos que SIEMPRE hacer una VERIFICACION DE INTEGRIDAD 
+DE LOS DATOS. ¿Como hacemos esto? Utilizando la tecnica de "CHECKSUM". ¿En que consiste esto?
+Nosotros le aplicaremos esta funcion a nuestro archivo que se encuentra en el 'nodo Getway' y 
+este nos devolvera un valor numerico. Al archivo que ya lo subimos y esta cargado en HDFS
+(Cluster virtual) le aplicaremos la misma funcion y tambien nos devolvera un valor numerico.
+Si ambos valores son iguales EXISTE INTEGRIDAD EN LOS DATOS. 
+
+Si por ejemplo, subimos un archivo a HDFS (al Cluster virtual):
+                      _________________________________________________
+                     |                                                 |    
+                     |       hdfs dfs -put /home/archivo  /hadoop      |
+                     |_________________________________________________|
+
+Inmediatamente le aplicamos la funcion 'checksum' al archivo:
+                      _________________________________________________
+                     |                                                 |    
+                     |                cksum /home/archivo              |
+                     |_________________________________________________|
+
+Y esto nos va a retornar un valor numerico:
+                      _________________________________________________
+                     |                                                 |    
+                     |                    229400302                    |
+                     |_________________________________________________|
+
+Luego, de haber cargado el archivo a HDFS y aplicar la funcion CHECKSUM al archivo en el Getway,
+aplicamos ahora la funcion al archivo en el HDFS:
+                      _________________________________________________
+                     |                                                 |    
+                     |       hdfs dfs -cat /hadoop/archivo | cksum     |
+                     |_________________________________________________|
+
+Y esto nos va a retornar un valor numerico:
+                      _________________________________________________
+                     |                                                 |    
+                     |                    229400302                    |
+                     |_________________________________________________|
+
+Al ser ambos numeros iguales EXISTE INTEGRIDAD DE DATOS.                     
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 3 --> 00:29:30  =====>  LISTADO DE PESOS RECURSIVOS  
+--------------------   
+                      _________________________________________________
+                     |                                                 |    
+                     |         hdfs dfs -du -s -h '/hadoop/*'          |
+                     |_________________________________________________|
+
+Nos devuelve dos valores de tamaño y la ruta del recurso de la siguiente forma:
+                      _________________________________________________
+                     |                                                 |    
+                     |          28.4K  85.3K   /hadoop/hive            |
+                     |_________________________________________________|
+
+Donde el primer tamaño es el PESO REAL y el segundo es aplicando la TRIPLE REPLICACION que realiza Hadoop, que
+corresponde al PESO FISICO EN DISCO DURO, porque se esta ocupando el triple de espacio.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 3 --> 00:31:00  =====>  MODIFICAR EL NUMERO DE REPLICAS 
+--------------------  
+
+Podemos aumentar o disminuir el número de réplicas. El numero '5' corresponde al numero de replicas. Podria
+ser cualquier numero que necesitemos.
+                      _________________________________________________
+                     |                                                 |    
+                     |         hdfs dfs -setrep -w 5 -R /hadoop        |
+                     |_________________________________________________|
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Clase 3 --> 00:32:50  =====>  MODIFICAR EL TAMAÑO DE BLOQUE
+--------------------          EXPLICACION DEL PORQUE NO SE RECOMIENDA CARGAR ARCHIVOS MUY PEQUEÑOS Y SU
+                              RELACION CON EL TAMAÑO DE BLOQUE
+
+Por defecto el tamaño de bloque de un archivo almacenado sobre HDFS es de 128MB. Si estamos guardando archivos 
+muy pequeños (p.e., de 10 MB) no tiene sentido guardarlo en un tamaño de bloque tan grande. Para esto al momento 
+de subir el archivo podemos guardarlo indicando el tamaño de bloque. El tamaño de bloque es indicado en bytes. 
+En el ejemplo el tamaño de bloque es colocado a 1MB.
+                      ________________________________________________________________________________
+                     |                                                                                |    
+                     |         hdfs dfs -D dfs.blocksize=102400 -put /home/file.txt /hadoop        |
+                     |________________________________________________________________________________|
+
+---------------------------------------------------------------------------------------------------------------- 

@@ -1,0 +1,231 @@
+YARN Y MAPREDUCE
+================
+
+● Hasta ahora hemos visto la parte de datos de Hadoop
+
+● Es el momento de ver los procesos
+
+● Tenemos dos versiones en este momento:
+  - MapReduce V1
+  - MapReduce V2 (más conocida como YARN)
+
+● MapReduce V1
+  - Pensada sobre todo para procesos Batch
+  - Se encarga tanto del proceso de los datos como de la gestión del cluster
+
+● YARN
+  - Admite otro tipo de productos y procesos que no sean Batch
+  - Tiene procesos distintos para el proceso de datos y para la gestión del cluster
+
+● Diferencias:
+
+	HADOOP 1.0                              HADOOP 2.0 y --->
+	___________       _____________________________ __________________________ 
+       | MapReduce |     | MapReduce (Data processing) |  Otros (Data processing) |
+       |-----------|	 |--------------------------------------------------------|
+       |   HDFS    |     |                           YARN                         |
+       |___________| 	 |               (Cluster resource management)            |
+	                 |--------------------------------------------------------|
+                         |                           HDFS                         |
+                         |               (Redundant, reliable storage)            |
+                         |________________________________________________________|
+
+● MapReduce ha pasado de ser el componente central (el core central) a formar parte de una de las posibles 
+  opciones que tengo para trabajar con Big Data.
+
+● MapReduce V1:
+  - Solo ofrece procesos de tipo MpReduce
+  - Tiene problemas de escalabilidad a partir de los 5000 nodos
+  - Tiene problemas de rendimiento, sobre todo con aplicaciones que no han sido propiamente hechas para ser 
+    Batch
+  - No gestionar correctamente los recursos
+
+-----------------------------------------------------------------------------------------------------------------------
+FUNCIONAMIENTO DE YARN
+======================
+                                                                          NODOS HIJO
+● Como funciona YARN                          _____________________________
+					     |       ________________      |
+	NODO MAESTRO                         |      |  NODE MANAGER  |     |
+ _________________________________________   |      |________________|     |
+|       _______________________		  |  |  ___________   ___________  |   _____________________________	
+|      |    Resource Manager   |          |  | | Container | | Container | |  |       ________________      |
+|      |_______________________|	  |  | | Reducer 2 | | Mapper 1  | |  |      |  NODE MANAGER  |     |
+| ___________  _____________  __________  |  | |___________| |___________| |  |      |________________|     |
+|| Scheduler || Application || Security | |  |_____________________________|  |  ___________   ___________  | 
+||___________||   Manager   ||__________| |   _____________________________   | | Container | | Container | |
+|	      |_____________| 		  |  |       ________________      |  | | Reducer 1 | | Mapper 3  | |
+|_________________________________________|  |      |  NODE MANAGER  |     |  | |___________| |___________| |
+					     |      |________________|     |  |_____________________________|  				
+                                             |  ___________   ___________  |  
+ 					     | |    APP    | | Container | | 
+					     | |  Master   | | Mapper 2  | |
+					     | |___________| |___________| |
+ 				             |_____________________________|			
+
+El Resource Manager va a ser el gestor de todo Yarn. A su vez tiene 3 subcomponentes:
+   - Scheduler: es un componente muy importante porque es el que determina cómo se planifican los trabajos, es decir, es 
+                el que decide los recursos que hay dentro del cluster y determina cuáles se van a ejecutar en un nodo o qué 
+		recursos tiene un nodo para que luego el APP Master decida dónde utilizarlos.
+
+   - Application Manager: es un recurso que lo que hace es que una vez que alguien solicita ejecutar una aplicación, va a 
+			  arrancar un Aplication Master dentro de los nodos, para que se encargue de esa aplicación.
+
+   - Security: Y por último pues también implementa medidas de seguridad.
+
+Bueno supongamos que tenemos tres nodos hijos, con lo cual tendremos en cada nodo hijo el NODE MANAGER. Entonces llega un 
+usuario o una aplicación y se lanza. Lo primero que se hace es solicitar a la Application Manager que se abra un APP MASTER.
+El 'Application Manager' va a tener en cuenta lo que le informe el Scheduler (el planificador) para decidir en qué nodo va a 
+arrancar el 'APP Master'. El 'APP Master' es un coordinador para la aplicación que acabamos de lanzar, es decir, que si yo 
+tengo 100 aplicaciones lanzadas dentro de un clúster, yo voy a tener 100 a 'APP Master', cada uno de los APP Master se encarga 
+de su aplicación. Este es uno de los motivos por el que los Cluster de tipo YARN pueden escalar tanto. Y este APP Master con 
+el planificador, con el Scheduler, va a ir arrancando los CONTAINER. Hemos visto que un 'Container' es un sitio donde se ejecuta 
+algo, por ejemplo, en un programa de tipo MapReduce, en una aplicación del tipo MapReduce, un container puede tener, por ejemplo, 
+un MAPPER, es decir, lo que hace el 'APP Master', es decir que en este nodo se abra un contenedor que al final es un recurso de 
+memoria y CPU y se ejecuta dentro un MAPPER y así con el resto. Y lo que hace al final 'APP MASTER' de acuerdo a la información 
+que le va a suministrar el 'Scheduler' (el planificador) y los datos que él tenga, va a determinar en qué nodos se va a ejecutar 
+cada uno de estos contenedores. Eso sí recordar que cada proceso tiene que acceder a su bloque de datos en local, por lo tanto, 
+por ejemplo, estos tres 'mapper' quiere decir que el bloque de datos que están manejando están en el nodo donde se han lanzado.
+Como podemos ver YARN es un gestor completo de recursos que no hace nada de trabajo de aplicación, sino, que sencillamente se 
+encarga de gestionar los recursos del cluster.
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURAR YARN EN UN CLUSTER
+=============================
+
+Vamos a montar la versión MapReduce 2 (más conocida como YARN):
+
+1.- (Solo tenemos una ventana) --> [hadoop@localhost ~] --> stop-dfs.sh (Si es que tenemos corriendo 'dfs')
+
+2.- [hadoop@localhost ~] --> cd /opt/hadoop/etc/hadoop/
+
+3.- [hadoop@localhost hadoop] --> ls -l --> gedit mapred-site.xml --> Se abrirá un block de notas
+
+4.- Dentro del block de notas escribimos lo siguiente entre las etiquetas <configuration></configuration>:
+	<configuration>
+		<property>
+			<name>mapreduce.framework.name</name>
+			<value>yarn</value>
+		</property>   
+	</configuration>                                              
+
+Le indicamos que digamos el motor que va a gestionar Hadoop va a ser de tipo YARN, entonces, tenemos que poner 
+esta esta propiedad "mapreduce.framework.name". Y le indicamos que el framework que se va a utilizar es YARN.
+Gurdamos y cerramos.
+
+5.- [hadoop@localhost hadoop] --> gedit yarn-site.xml --> Se abrirá un block de notas
+
+6.- Dentro del block de notas escribimos lo siguiente entre las etiquetas <configuration></configuration>:
+	<configuration>
+		<property>
+			<name>yarn.resourcemanager.hostname</name>
+			<value>localhost</value>
+		</property>
+		<property>
+			<name>yarn.nodemanager.aux-services</name>
+			<value>mapreduce_shuffle</value>
+		</property>
+		<property>
+			<name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>
+			<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+		</property>  
+	</configuration>     
+
+En concreto vamos a poner tres propiedades: la primera propiedad le vamos a especificar cuál es el nombre
+de la máquina donde está el gestor del YARN. Recordar que en los capítulos anteriores en las transparencias 
+que hemos visto en el capítulo anterior, habíamos hablado de que teníamos tres procesos en el YARN: el 
+Resource Manager, el Application Manager y el Node Manager.El Resource manager quedamos en que era el gestor 
+del clúster propiamente dicho. Entonces, tenemos que poner: 'localhost'. Le vamos a decir que el 
+"yar.resourcemanager.hostname" es 'localhost'. Es decir, aquí le decimos quién es el maestro que va a gestionar 
+los procesos YARN. Luego tenemos que poner otras dos propiedades que realmente lo que nos van a decir es cuál 
+es la clase que gestiona el YARN. En este caso vamos a tener que poner dos propiedades: una indicando que los 
+servicios auxiliares que van a gestionar el MapReduce valen esto "mapreduce_shuffle" y aquí en la siguiente 
+propiedad indicamos que ese 'mapreduce.shuffle.class' es esta de aquí: org.apache.hadoop.mapred.ShuffleHandler. 
+En realidad digamos que es lo mismo, porque, habría que ponerlo, es decir, este es el valor por defecto, el 
+valor predefinido que tiene esta arquitectura de YARN. Guardamos y cerramos.
+
+7.- ¿Como arrancamos el Cluster? --> [hadoop@localhost hadoop] --> start-dfs.sh --> Arrancamos la parte de los datos
+                                                                                    el namenode, el datanode y el
+                                                                                    secundarynamenode.
+
+8.- [hadoop@localhost hadoop] --> start-yarn.sh --> Arrancamos el Resource manager y el Nodemanager. El Aplication
+                                                    manager arranca cuando ejecutamos un programa.
+
+9.- [hadoop@localhost hadoop] --> jps --> Podemos ver ahora TODOS LOS PROCESOS EN UN MISMO NODO
+
+-----------------------------------------------------------------------------------------------------------------------
+WEB DE ADMINISTRACION DE YARN
+=============================
+
+Debemos ingresar a: https://localhost:8088
+
+-----------------------------------------------------------------------------------------------------------------------
+HADOOP 3: Modificación en YARN-SITE para Hadoop 3
+=================================================
+
+Hola a todos, para los que uséis la versión 3 de Hadoop, a veces puede generar un error al realizar alguno de los ejemplos.
+
+Para solucionarlo, es necesario explicitar algunas librerías
+
+En concreto hay que añadir en el yarn-site.xml la siguiente entrada (por supuesto adaptarlo a vuestro HADOOP_HOME.
+
+<property>
+	<name>yarn.application.classpath</name>
+    	 <value>
+            	/opt/hadoop3/hadoop/etc/hadoop,
+            	/opt/hadoop3/share/hadoop/common/*,
+            	/opt/hadoop3/share/hadoop/common/lib/*,
+            	/opt/hadoop3/share/hadoop/hdfs/*,
+            	/opt/hadoop3/share/hadoop/hdfs/lib/*,
+            	/opt/hadoop3/share/hadoop/mapreduce/*,
+            	/opt/hadoop3/share/hadoop/mapreduce/lib/*,
+            	/opt/hadoop3/share/hadoop/yarn/*,
+            	/opt/hadoop3/share/hadoop/yarn/lib/*
+    	 </value>
+</property>
+
+-----------------------------------------------------------------------------------------------------------------------
+FUNCIONAMIENTO DE MAPREDUCE
+===========================
+
+● La mayor parte de las herramientas de consulta están diseñadas para realizar consultas simples que deben ejecutarse
+  rápidamente.
+
+● El dato suele estar indexado y por tanto solo pequeñas porciones de datos se examinan durante la búsqueda.
+
+● Esta solución, en cambio no es útil para datos no indexados de tipo semi estructurado o no estructurados.
+
+●  Para responder una query en esta solución es necesario examinar todos los datos
+
+● Hadoop utiliza MapReduce para realizar un análisis exhaustivo de forma rápida.
+
+● MapReduce:
+  - Es un algoritmo de procesamiento de datos que implementa un proceso en paralelo. 
+  - Es un algoritmo que podemos decir que es un algoritmo de tipo Batch que va implementando procesos en paralelo,
+    es decir, si tenemos 1000 nodos vamos a intentar, si un trabajo dura 1 hora, dividirlo por 1000, pues, durará
+    mucho menos. Es decir, en vez de ejecutar un proceso de manera secuencial, trocealo y mándalo a cada nodo y eso 
+    hace que el rendimiento sea mucho mayor.
+  - De forma simple distribuye las tareas a través de los nodos de un cluster ejecutando una función "map".
+	* La función 'map' estudia el problema, lo divide en trozos y los manda a diferentes máquinas para que todos
+          los trozos puedan ejecutarse concurrentemente. Y eso es lo que hace mapper, se coge cada uno de esos trozos
+          y dice: " ... si tengo 50 trozos voy ejecutar 50 veces el mismo proceso, pero, con datos distintos ... ".
+          En tonces, va a coger 50 procesos en paralelo y los va a lanzar. Y al final va a glutinar los resultados.
+	* Los resultados de este proceso paralelo se recogen y se distribuyen a través de distintos servidores que 
+ 	  ejecutan una función "reduce", que toma los resultados de los trozos y los recombina para obtener una respuesta
+	  simple.
+
+● Procesos MAPPER:
+  - Los programas MapReduce se dividen en 'Mappers', tareas que se ejecutan en los nodos
+  - Cada tarea MAP ataca a un solo bloque de datos HDFS
+  - Se ejecuta en el nodo donde reside el bloque (salvo excepciones)
+
+● Shuffle y Sort
+  - Ordena y consolida los datos intermedios (temporales) que generan los mappers
+  - Se lanzan después de que todos los mappers hayan terminado y antes de que se lancen los 
+    procesos 'Reducer'
+
+● Reducer
+  - Operan sobre los datos intermedios Shuffle/Sort
+  - Generan la salida final
+
+-----------------------------------------------------------------------------------------------------------------------

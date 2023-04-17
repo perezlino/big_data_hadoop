@@ -1,0 +1,560 @@
+IMPLEMENTACION CONSUMER
+=======================
+
+¿Qué tenemos implementado hasta este momento? 
+
+Hemos visto cómo se hace esta implementación hasta el envío de los datos al tópico. Ahora lo que vamos a hacer es empezar 
+a extraer los datos que están lloviendo en Kafka para empezar a procesarlos. Vamos a hacer la parte del código, el Consumer, 
+y aplicarla en una pequeña lógica de negocio. Ya hemos hecho entonces esta primera parte, el Client Source y el Producer, 
+ya han visto algunos detalles propios de la codificación y ya tenemos un arquetipo que nos permite trabajar fácilmente. Lo 
+que tenemos que hacer ahora es, acá tenemos un Consumer, el Producer ya lo tenemos listo, ahora el Consumer lo tenemos 
+solamente en consola para ver si la data está llegando al tópico y efectivamente está llegando al tópico, lo que vamos a 
+hacer ahora es implementar este mismo Consumer que está en consola, pero aquí directamente en un lenguaje de programación. 
+Para eso obviamente vamos a necesitar otro notebook. Así como tengo un Producer ahora vamos a implementar otro notebook el 
+Consumer. Ahora vamos a implementar el Consumer que tenemos en consola pero en código. La magia de tenerlo en código es que, 
+ya sabemos, esto lo vamos a extraer un archivito y vamos a hacer algo con ello, vamos a hacer algo con cada uno de estos 
+registros que estamos ingestando. 
+
+Vamos a dejar encendido el Producer para que vaya enviando algunos datos y también por consola ejecutaremos el Consumer de 
+prueba. Ahora, vamos a hacer este mismo Consumer pero en código, obviamente, para poder manipular las cadenas que está 
+enviando el Producer. 
+
+¿Qué consideraciones tenemos que tener en cuenta el momento de implementar el Consumer?
+
+Número uno: los datos en el tópico Kafka están como cadena de caracteres encodeadas a binario, así como formateamos, la 
+fuente de datos original estaba en formato JSON, pero tuvimos que escribirlo en el tópico como STRINGS, porque, el tópico 
+solo soporta ese tipo de formato. Para procesarlos tenemos que volver a su estado original, eran JSON inicialmente así que 
+tenemos que volver a convertir a los STRINGS a su tipo de dato original, a JSON. Por lo tanto, el Consumer tiene que tener 
+una primera función que formatee la data nuevamente, que agarre la data que está en STRING y la convierta a JSON. Una vez 
+que ya el Consumer haya formateado el tipo de dato correcto, esos registros se los pasará al motor de procesamiento y ya lo 
+podemos procesar, porque, ya los tenemos en JSON, en XML o lo que la fuente de datos nos entrega, lo que en la fuente de 
+datos estaba originalmente. Vamos a escribir primero la función que para cada registro que le regrese el tópico, ya sabemos 
+que le va a regresar un archivo y dentro están los registros, vamos a construir una función que se va a aplicar a cada uno 
+de los registros del pequeño archivo MICRO-BATCH y va a convertir el STRING a un JSON. Vamos a crear en el Consumer una 
+función llamada “formatData()”, la cual, va a recibir, ya sabemos que Kafka nos enviar un pequeño MICRO-BATCH, un archivo 
+con muchos registros, pero esta función se la vamos a aplicar a cada registro, por lo tanto, de entrada esta función tiene 
+un registro (el parámetro “register”) realmente le puedo poner el nombre que yo quiera, pero esta función va a recibir un 
+registro del archivo que nos entregue Kafka. 
+
+                     _________________________________________________________________
+                    |                                                                 |              
+                    |   -- Convierte los datos recibidos a un formato procesable --   |  
+                    |                                                                 |  
+                    |   def formatData(register):                                     |  
+                    |_________________________________________________________________|
+
+
+¿Qué es lo que vamos a hacer con esta función? ¿qué es lo que está devolviendo el tópico? nos está devolviendo lo siguiente: 
+nos va devolver 'n' registros, digamos que son cuatro los registros que nos está devolviendo.  
+
+             ___________________________________________________________________________________________________
+            |                                                                                                   |
+            |   [{"ID_PERSONA":90,"ID_EMPRESA":2,"MONTO":2660},{"ID_PERSONA":98,"ID_EMPRESA":1,"MONTO":2107},   |
+            |    {"ID_PERSONA":98,"ID_EMPRESA":4,"MONTO":1801},{"ID_PERSONA":15,"ID_EMPRESA":2,"MONTO":3570},   |
+            |    {"ID_PERSONA":93,"ID_EMPRESA":10,"MONTO":3343},{"ID_PERSONA":13,"ID_EMPRESA":6,"MONTO":4462},  |
+            |    {"ID_PERSONA":15,"ID_EMPRESA":3,"MONTO":3366},{"ID_PERSONA":2,"ID_EMPRESA":3,"MONTO":3483},    |
+            |    {"ID_PERSONA":64,"ID_EMPRESA":3,"MONTO":2212},{"ID_PERSONA":83,"ID_EMPRESA":6,"MONTO":666}]    |
+            |                                                                                                   |    
+            |   [{"ID_PERSONA":96,"ID_EMPRESA":5,"MONTO":2898},{"ID_PERSONA":92,"ID_EMPRESA":7,"MONTO":1981},   |
+            |    {"ID_PERSONA":18,"ID_EMPRESA":2,"MONTO":4331},{"ID_PERSONA":93,"ID_EMPRESA":9,"MONTO":4099},   |
+            |    {"ID_PERSONA":8,"ID_EMPRESA":7,"MONTO":4202},{"ID_PERSONA":83,"ID_EMPRESA":2,"MONTO":2265},    |
+            |    {"ID_PERSONA":94,"ID_EMPRESA":2,"MONTO":2991},{"ID_PERSONA":8,"ID_EMPRESA":1,"MONTO":2062},    |
+            |    {"ID_PERSONA":82,"ID_EMPRESA":9,"MONTO":1493},{"ID_PERSONA":73,"ID_EMPRESA":6,"MONTO":3805}]   |
+            |                                                                                                   |
+            |   [{"ID_PERSONA":10,"ID_EMPRESA":8,"MONTO":4253},{"ID_PERSONA":27,"ID_EMPRESA":6,"MONTO":3141},   |
+            |    {"ID_PERSONA":26,"ID_EMPRESA":3,"MONTO":1185},{"ID_PERSONA":76,"ID_EMPRESA":3,"MONTO":1947},   |
+            |    {"ID_PERSONA":14,"ID_EMPRESA":7,"MONTO":1605},{"ID_PERSONA":62,"ID_EMPRESA":10,"MONTO":4093},  |
+            |    {"ID_PERSONA":22,"ID_EMPRESA":7,"MONTO":1985},{"ID_PERSONA":77,"ID_EMPRESA":9,"MONTO":3142},   |
+            |    {"ID_PERSONA":68,"ID_EMPRESA":8,"MONTO":1625},{"ID_PERSONA":86,"ID_EMPRESA":1,"MONTO":1179}]   |
+            |                                                                                                   |
+            |   [{"ID_PERSONA":15,"ID_EMPRESA":7,"MONTO":564},{"ID_PERSONA":35,"ID_EMPRESA":5,"MONTO":547},     |
+            |    {"ID_PERSONA":84,"ID_EMPRESA":3,"MONTO":3753},{"ID_PERSONA":97,"ID_EMPRESA":9,"MONTO":294},    |
+            |    {"ID_PERSONA":99,"ID_EMPRESA":7,"MONTO":641},{"ID_PERSONA":54,"ID_EMPRESA":1,"MONTO":2526},    |
+            |    {"ID_PERSONA":1,"ID_EMPRESA":6,"MONTO":1833},{"ID_PERSONA":83,"ID_EMPRESA":9,"MONTO":2397},    |
+            |    {"ID_PERSONA":91,"ID_EMPRESA":10,"MONTO":3789},{"ID_PERSONA":40,"ID_EMPRESA":4,"MONTO":457}]   |
+            |___________________________________________________________________________________________________|
+
+
+Ahora, ¿cómo son estos registros? el primer registro es un ARRAY de JSON, el segundo registro es un ARRAY de JSON, el tercer 
+registro es un ARRAY de JSON. Son objetos ARRAY, son ARRAY de JSON. Así que tenemos colecciones JSON, pero no hay que confundir 
+lo siguiente, estos son los registros que se están escribiendo en el tópico Kafka, pero todo registro que se escribe en un 
+tópico a nivel binario es un ARRAY de 2 elementos: un KEY y un VALUE. 
+
+                                                     ___________________
+                                                    |                   |
+                                                    |    [KEY, VALUE]   |
+                                                    |___________________|
+
+
+Lo que estamos viendo en este Consumer de prueba, lo que está recibiendo el Consumer es este segundo elemento, el VALUE. Por 
+ejemplo, para el primer registro:  
+
+
+[KEY, [{"ID_PERSONA":96,"ID_EMPRESA":5,"MONTO":2898},{"ID_PERSONA":92,"ID_EMPRESA":7,"MONTO":1981},   
+       {"ID_PERSONA":18,"ID_EMPRESA":2,"MONTO":4331},{"ID_PERSONA":93,"ID_EMPRESA":9,"MONTO":4099},   
+       {"ID_PERSONA":8,"ID_EMPRESA":7,"MONTO":4202},{"ID_PERSONA":83,"ID_EMPRESA":2,"MONTO":2265},    
+       {"ID_PERSONA":94,"ID_EMPRESA":2,"MONTO":2991},{"ID_PERSONA":8,"ID_EMPRESA":1,"MONTO":2062},    
+       {"ID_PERSONA":82,"ID_EMPRESA":9,"MONTO":1493},{"ID_PERSONA":73,"ID_EMPRESA":6,"MONTO":3805}]   
+]
+
+
+Ahora, ¿el KEY cuál será? realmente no nos importa, porque, se acuerdan que se comentó que en el caso de HBase la data se 
+balancea en función de un KEY, de un ROW KEY, algo parecido pasa en Kafka, pero como en Kafka los datos viven de manera temporal 
+en la memoria RAM realmente no es necesario tener una estrategia de balanceo de cargas, así que, para efectos prácticos el KEY 
+asociado al registro está en “null”: 
+
+[null, [{"ID_PERSONA":96,"ID_EMPRESA":5,"MONTO":2898},{"ID_PERSONA":92,"ID_EMPRESA":7,"MONTO":1981},   
+        {"ID_PERSONA":18,"ID_EMPRESA":2,"MONTO":4331},{"ID_PERSONA":93,"ID_EMPRESA":9,"MONTO":4099},   
+        {"ID_PERSONA":8,"ID_EMPRESA":7,"MONTO":4202},{"ID_PERSONA":83,"ID_EMPRESA":2,"MONTO":2265},    
+        {"ID_PERSONA":94,"ID_EMPRESA":2,"MONTO":2991},{"ID_PERSONA":8,"ID_EMPRESA":1,"MONTO":2062},    
+        {"ID_PERSONA":82,"ID_EMPRESA":9,"MONTO":1493},{"ID_PERSONA":73,"ID_EMPRESA":6,"MONTO":3805}]   
+]
+
+
+No nos interesa el KEY. Pero, ¿qué es lo importante? entender que el registro que queremos procesar está en la posición 2 del 
+ARRAY, así que realmente cada registro no es lo que está pintando el Consumer en consola, si no, que el verdadero primer registro 
+sería el KEY, un valor KEY que no nos importa, porque, no estamos mapeándolo. Luego tenemos el registro propiamente dicho, que 
+correspondería al segundo elemento del ARRAY. Es importante entender esto, porque, nosotros queremos trabajar con este segundo 
+elemento del ARRAY, así que, Kafka nos va a devolver la KEY con que distribuye los registros en el Clúster Kafka, entre los 
+diferentes servidores y en la segunda posición el valor que nos interesa, los registros propiamente dicho que estamos ingestando. 
+El primer paso, entonces, sería el siguiente: “…mira yo solamente quiero trabajar con el valor de los registros, que no están en 
+la primera posición, están en la segunda posición así que extraigo realmente el registro, ya sabemos que son 2 elementos, solo 
+quiero el valor del registro…”:
+
+                     _________________________________________________________________
+                    |                                                                 |              
+                    |   -- Convierte los datos recibidos a un formato procesable --   |  
+                    |                                                                 |  
+                    |   def formatData(register):                                     | 
+                    |                                                                 |  
+                    |       registerValue = register[1]                               |  
+                    |_________________________________________________________________|
+
+
+Bien, ya tengo entonces aquí mi cadena JSON. Ahora, vamos a convertir ese segundo elemento que hemos extraído, que es una cadena 
+de caracteres, lo vamos a volver a convertir a un JSON, como estaba originalmente. ¿Cómo se hace eso en Python? importamos la 
+librería JSON que ya tiene esas funciones utilitarias y a qué le vamos a decir: “…quiero tener el registro, pero quiero que esté 
+formateado…” de mi librería JSON voy utilizar la función que convierte cadena de caracteres a JSON, la función “loads()” y le voy 
+a pasar como entrada el registro que hemos leído y esta función la vamos a aplicar a todos los registros que se van a ir 
+acumulando a lo largo del tiempo en Kafka en cada extracción y luego por supuesto que haga un return del registro formateado:
+
+                     _________________________________________________________________
+                    |                                                                 |
+                    |   import json                                                   |
+                    |                                                                 |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --   |  
+                    |                                                                 |  
+                    |   def formatData(register):                                     | 
+                    |                                                                 |  
+                    |       registerValue = register[1]                               | 
+                    |       registerFormatted = json.loads(registerValue)             |
+                    |                                                                 |  
+                    |       return registerFormatted                                  |    
+                    |_________________________________________________________________|
+
+
+Ya tenemos la función de formateo de los registros. Ahora vamos a construir la función que le aplique alguna lógica de negocio a 
+cada registro. Por ejemplo, vamos a agregar la fecha y hora de transacción, para eso vamos a crear la función “enrichementData()” 
+cuya entrada van a ser estos registros que ya están formateados.
+
+                     _________________________________________________________________
+                    |                                                                 |              
+                    |   -- Realiza el proceso de enriquecimiento --                   |  
+                    |                                                                 |  
+                    |   def enrichementData(registerFormatted):                       |  
+                    |_________________________________________________________________|
+
+
+¿Qué vamos a hacer con estos registros formateados? 
+
+Voy a obtener la fecha y hora del sistema y a cada registro le voy a agregar la fecha y hora, para saber en qué fecha y hora se 
+hizo la transacción. Vamos a importar la librería “datetime” que tiene Python para extraer la fecha y hora y decimos lo siguiente: 
+“…fechaHora va a ser igual a, de la librería “datetime” hay un objeto llamado “datetime.now” que me entrega la fecha y hora del 
+sistema. Ahora a este registro formateado (“registerFormatted”) le voy a agregar un campo, FECHA_TRANSACCIÓN que va a ser igual 
+a, ¿cómo se extrae la fecha en Python? de la siguiente manera, de la variable que tiene la fecha y hora (“fechaHora”) le digo 
+dame la fecha (“.date()”). Y al registro formateado le quiero agregar otro campo HORA_TRANSACCIÓN. ¿Cómo se obtiene la hora en 
+Python? de la siguiente manera, ya no quiero una fecha, si no, de la variable fecha-hora (“fechaHora”) le digo dame la hora 
+(“.time()”). Y listo ya procesé mi registro y lo devuelvo.
+
+                     _______________________________________________________________________
+                    |                                                                       |
+                    |   import datetime                                                     |  
+                    |                                                                       |      
+                    |   -- Realiza el proceso de enriquecimiento --                         |  
+                    |                                                                       |  
+                    |   def enrichementData(registerFormatted):                             |
+                    |                                                                       |
+                    |	    fechaHora = datetime.datetime.now()                             |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())  |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())   |
+                    |                                                                       |        
+                    |       return registerFormatted                                        |
+                    |_______________________________________________________________________|
+
+
+Siempre tenemos que tener al menos como mínimo 2 funciones, una “formatData” que extraiga el valor del registro que estamos 
+procesando y lo vuelve a su formato original, porque, en Kafka está en cadena de caracteres, originalmente estaba en JSON, lo 
+estamos volviendo convertir a JSON. Y otra función que se encargue de procesar el registro, ¿qué queremos hacer con ese registro? 
+Bueno, le vamos a agregar la fecha y hora de transacción. Ahora vamos a utilizar estas 2 funciones y para eso tenemos que entender 
+lo que es SPARK STREAMING.
+
+
+Entendamos lo que es SPARK STREAMING
+====================================
+
+Hay 2 conceptos importantes que tenemos que entender: el SPARK STREAMING CONTEXT y el STREAM DE DATOS. ¿Cómo están relacionados 
+estos 2 conceptos? para eso podemos poner el ejemplo de un grifo de donde sale agua, abrimos el grifo y sale agua, si hacemos una 
+analogía el STREAM DE DATOS vendría a ser el “agua” y de alguna manera nosotros tenemos qué conectarnos a este STREAM DE DATOS y 
+hacerles algo. Para eso vamos a utilizar una variable especial en SPARK STREAMING llamada “”STREAM”. La variable “STREAM” es la 
+que se va a encargar de interceptar ese flujo de datos que vengan de una fuente de datos, que en este caso sería Kafka. 
+Obviamente, Kafka es como el grifo de el grifo y el agua vendría a ser el STREAM DE DATOS que queremos procesar, así que de alguna 
+manera tenemos que sacar el STREAM DE DATOS, es como que tuviésemos que abrir el grifo” para que lo coloquemos en esta variable 
+“STREAM”. SPARK STREAMING qué te dice: “…mira yo te garantizo que los datos que salgan de la fuente de datos (Kafka, “el grifo”) 
+se van a colocar siempre en esta variable (“STREAM”), ahora la pregunta es y, ¿cada cuánto tiempo quieres que lo que salga del 
+origen (Kafka, “el grifo”) se coloque en esta variable (“STREAM”), porque a esta variable es donde nosotros vamos a aplicar las 
+reglas de negocio, ¿qué queremos hacer con el STREAM DE DATOS? queremos hacerle distintas tareas A,B,C,D,E,I y F. Lo que SPARK no 
+sabe es que  cada cuánto tiempo vamos a abrir el grifo para que salga el agua. Se acuerdan que el Consumer tiene un tiempo de 
+extracción, eso es como, a ver, cada cuánto tiempo abrimos el grifo para que salga el agua, eso lo define otra variable el 
+“SPARK STREAMING CONTEXT” son 2 variables diferentes. Con la variable SPARK STREAMING CONTEXT controlamos cada cuántos segundos 
+vamos a abrir el grifo. Sale el agua del grifo, ahora esa agua hay que colocarla en una variable, la tenemos que colocar en la 
+variable STREAM y sobre esa variable tenemos garantía de que cada cierto tiempo, esta variable (STREAM) se va a actualizar con 
+los datos que vengan del origen (Kafka), por ejemplo, cada 5 segundos y en esta variable vamos a empezar a decir: “…a ver primero 
+quiero hacer, no sé pues, algo, luego otra cosa, luego otra cosa y así, vamos a ir definiendo los pasos de lo que queremos hacer. 
+En resumen, con la variable SPARK STREAMING CONTEXT vamos a controlar cada cuánto se abre el grifo, cada 5 segundos, el tiempo 
+del Consumer y los datos que salgan de ese grifo los vamos a colocar en esta variable STREAM, que se va a actualizar cada cierto 
+tiempo, porque, ya sabemos que cada 5 segundos se va abrir este grifo y en esta variable ya definimos que lógicas de negocio 
+queremos aplicar. ¿Cómo se hace todo esto en código? Bueno, la función “formatData” la vamos aplicar sobre la variable STREAM. 
+En el STREAM DE DATOS básicamente vamos a hacer, primero hay que formatear de STRINGS a JSON, ese es el primer paso que se debe 
+aplicar a todos los registros que estén en el STREAM DE DATOS, segundo paso, hemos creado una función en la cual vamos a escribir 
+nuestras reglas de negocio. Entonces, formateamos y aplicamos reglas de negocio, eso se lo asociamos a la variable STREAM. 
+¿Cómo hacemos esto? primero vamos a crear estas 2 variables. Vamos a importar las librerías que nos van a permitir crear estas 
+variables, primero de la librería “pyspark” voy a importar el módulo “SparkContext” éste es un módulo para hacer procesamiento en 
+batch y de la librería “pyspark.streaming” voy a importar la variable “StreamingContext” la cual me va a ayudar a hacer 
+procesamientos en tiempo real, me va a ayudar a definir cada cuanto abro el grifo, cada 5 segundos. Y también voy a necesitar 
+otra librería que me va a permitir conectarme a la a la tecnología de encolamiento que estoy usando, estamos usando Kafka, pero 
+esto podría ser Event Hub de Azure o Kinesis de AWS pero necesitamos una librería que nos facilite esa conexión, por ejemplo, 
+nosotros vamos a utilizar “KafkaUtils”  tiene los utilitarios para que el Consumer se conecte a Kafka. Importamos las librerías y 
+ahora vamos a usarlas en el código. 
+
+                     _______________________________________________________________________
+                    |                                                                       |
+                    |   import json                                                         |
+                    |   import datetime                                                     |  
+                    |   from pyspark import SparkContext                                    |  
+                    |   from pyspark.streaming import StreamingContext                      |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                      |   
+                    |                                                                       |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --         |  
+                    |                                                                       |  
+                    |   def formatData(register):                                           | 
+                    |                                                                       |      
+                    |       registerValue = register[1]                                     |  
+                    |       registerFormatted = json.loads(registerValue)                   |
+                    |                                                                       |  
+                    |       return registerFormatted                                        |    
+                    |                                                                       |
+                    |                                                                       |    
+                    |   -- Realiza el proceso de enriquecimiento --                         |  
+                    |                                                                       |  
+                    |   def enrichementData(registerFormatted):                             |
+                    |                                                                       |
+                    |	    fechaHora = datetime.datetime.now()                             |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())  |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())   |
+                    |                                                                       |        
+                    |       return registerFormatted                                        |
+                    |_______________________________________________________________________|
+
+
+Número uno, voy a crear la variable SPARK STREAMING CONTEXT, la que me permite abrir el grifo cada cierta cantidad de segundos. 
+Le digo, por estándar le podría poner cualquier nombre pero por estándar se llama “ssc”, esto va a ser igual a, utilizo mi 
+librería que me permite crear este “StreamingContext” y le digo lo siguiente, Spark por defecto te crea la variable, se acuerdan 
+que había una variable especial llamada “spark” con el que nosotros trabajamos para hacer “spark.sql” o “spark.read.format()”, 
+en el streaming pasa algo parecido, hay una variable “sc” que es del “spark context”, en función de esta variable vamos a crear 
+nuestra variable “StreamingContext”. El streaming lo queremos hacer cada 5 segundos, vamos a abrir el grifo cada 5 segundos, eso 
+lo controla esta variable.
+
+                                 ________________________________________________
+                                |                                                |   
+                                |   -- Creación del Spark Streaming Context --   |
+                                |                                                |   
+                                |   ssc = StreamingContext(sc, 5)                |   
+                                |________________________________________________|
+
+
+Ahora vamos a crear la segunda variable, STREAM, la que va a obtener los datos que el grifo bote cada 5 segundos. ¿Cómo se crea 
+eso? el STREAM va a depender del tipo de grifo, ¿a qué me refiero con esto? este grifo es un Kafka o podría ser un EventHub o 
+podría ser un Kinesis o qué sé yo, así que acá yo tengo KafkaUtils que me va a ayudar a conectarme a un STREAM de Kafka, si fuese 
+Kinesis u otra tecnología, tendría que ser otro utilitario que también ya existe. Por medio del KafkaUtils le voy a decir: 
+“…vamos a crear un STREAM de conexión que va a sacar lo que esté en Kafka y lo va a meter en esta variable, ¿qué parámetros 
+tenemos que indicarle? tenemos que darle como primer parámetro el SPARK STREAMING CONTEXT (“ssc”), porque en la variable “ssc” 
+está definido cada cuánto se va a extraer la data de Kafka, cada 5 segundos. Dentro de un ARRAY vamos a indicarle el tópico al 
+cual nos vamos a conectar, “topic_transaccion”.
+
+                                 ________________________________________________________________________
+                                |                                                                        |   
+                                |   -- Creación del Spark Streaming Context --                           |
+                                |                                                                        |   
+                                |   ssc = StreamingContext(sc, 5)                                        |
+                                |                                                                        |   
+                                |                                                                        |   
+                                |   -- Conexión a Kafka                                                  |   
+                                |                                                                        |   
+                                |   stream = KafkaUtils.createDirectStream(ssc, ["topic_transaccion"])   |
+                                |________________________________________________________________________|
+
+
+¿Por qué dentro de un ARRAY? 
+
+porque en teoría podemos conectarnos a varios tópicos a la vez. Nosotros nos estamos conectando un solo tópico. Es por eso el 
+parámetro soporta un ARRAY. 
+
+                 ____________________________________________________________________________________________
+                |                                                                                            |   
+                |   -- Creación del Spark Streaming Context --                                               |
+                |                                                                                            |   
+                |   ssc = StreamingContext(sc, 5)                                                            |
+                |                                                                                            |   
+                |                                                                                            |   
+                |   -- Conexión a Kafka                                                                      |   
+                |                                                                                            |   
+                |   stream = KafkaUtils.createDirectStream(ssc, ["topic_transaccion", "xxxxxx", "yyyyyy"])   |
+                |____________________________________________________________________________________________|
+
+
+Y tenemos que indicarle un parámetro adicional llamado, que ya lo conocemos, “metadata.broker. list” y luego le indicamos las 
+que vendrían a ser las IPs en donde está instalado el Clúster Kafka, solamente está instalado en una IP, si tuviesen más las 
+agregaríamos separadas por una coma.
+
+ ___________________________________________________________________________________________________________________
+|                                                                                                                   |   
+|   -- Creación del Spark Streaming Context --                                                                      |
+|                                                                                                                   |   
+|   ssc = StreamingContext(sc, 5)                                                                                   |
+|                                                                                                                   |   
+|                                                                                                                   |   
+|   -- Conexión a Kafka                                                                                             |   
+|                                                                                                                   |   
+|   stream = KafkaUtils.createDirectStream(ssc, ["topic_transaccion"], {"metadata.broker.list": "10.0.0.4:9092"})   |
+|___________________________________________________________________________________________________________________|
+
+
+Ya tenemos creadas nuestras 2 variables. Una vez que ya hemos creado la conexión, ahora lo que tenemos que hacer es, ya tenemos 
+garantía que en la variable “stream” se van a colocar los datos cada 5 segundos, y ¿qué queremos hacer con este STREAM DE DATOS? 
+2 pasos: formatearlos para volverlos al tipo de dato original y luego aplicarles alguna regla de negocio. Esas 2 funciones ya las 
+tenemos implementadas aquí, “formatData()” con esta formateamos y “enrichmentData()” con esta aplicamos una regla de negocio a 
+cada registro formateado. Así que vamos a aplicar estas lógicas. Al STREAM DE DATOS le quiero aplicar mi primera función, en un 
+momento explicamos esto a detalle, a cada registro de este STREAM DE DATOS le quiero aplicar mi función llamada “formatData()” 
+que va a recibir de entrada el registro. Con este primer pedazo de código lo que estamos haciendo es aplicar esta primera función.
+
+                                 ____________________________________________________________
+                                |                                                            |   
+                                |   -- Procesamiento de los datos --                         |
+                                |                                                            |   
+                                |   stream.flatMap(lambda register : formatData(register))   |   
+                                |____________________________________________________________|
+
+
+Una vez que tenemos formateado los datos, vamos a aplicarle la segunda función, y le digo: “…a cada registro que me haya votado 
+la ejecución de la función anterior le quiero aplicar esta función:
+
+         _____________________________________________________________________________________________________________
+        |                                                                                                             |   
+        |   -- Procesamiento de los datos --                                                                          |
+        |                                                                                                             |   
+        |   stream.flatMap(lambda register : formatData(register)).map(lambda register : enrichementData(register))   |   
+        |_____________________________________________________________________________________________________________|
+
+
+Ahí ya tendríamos aplicadas nuestras 2 funciones, la primera y aquí la segunda, primero formateamos y luego aplicamos un proceso 
+de enriquecimiento. Supongamos que queremos hacer más cosas, queremos agregar otra cosa más, otra función que hace algo más, 
+entonces agregamos la función “algoMas()” que recibe el registro, ya sabemos que la función “enrichmentData” va a agregar fecha y 
+hora. A la variable “stream” le agregamos un nuevo “map” y nuevamente escribo “…a cada registro : le quiero aplicar la función 
+algoMas(register) de mi lógica de negocio y así sucesivamente.
+
+                     _______________________________________________________________________
+                    |                                                                       |
+                    |   import json                                                         |
+                    |   import datetime                                                     |  
+                    |   from pyspark import SparkContext                                    |  
+                    |   from pyspark.streaming import StreamingContext                      |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                      |   
+                    |                                                                       |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --         |  
+                    |                                                                       |  
+                    |   def formatData(register):                                           | 
+                    |                                                                       |      
+                    |       registerValue = register[1]                                     |  
+                    |       registerFormatted = json.loads(registerValue)                   |
+                    |                                                                       |  
+                    |       return registerFormatted                                        |    
+                    |                                                                       |
+                    |                                                                       |    
+                    |   -- Realiza el proceso de enriquecimiento --                         |  
+                    |                                                                       |  
+                    |   def enrichementData(registerFormatted):                             |
+                    |                                                                       |
+                    |	    fechaHora = datetime.datetime.now()                             |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())  |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())   |
+                    |                                                                       |        
+                    |       return registerFormatted                                        |
+                    |                                                                       | 
+                    |                                                                       |    
+                    |   def algoMas(register):                                              |
+                    |                                                                       |
+                    |       xxxxxxxxxxxxxxxx                                                |
+                    |_______________________________________________________________________|
+
+                         ______________________________________________________________
+                        |                                                              |   
+                        |   -- Procesamiento de los datos --                           |                                           
+                        |                                                              |                                           
+                        |   stream.flatMap(lambda register : formatData(register)).\   | 
+                        |   map(lambda register : enrichementData(register)).\         | 
+                        |   map(lambda register : algoMas(register))                   | 
+                        |______________________________________________________________|
+
+
+Básicamente estas funciones que estoy agregando lo que hacen es una especie de ‘for’ a todo el STREAM DE DATOS que estamos 
+recibiendo, si hemos recibido 100.000 registros, ¿qué es lo que hace esta función map? en el STREAM DE DATOS (“stream”) vamos a 
+tener el micro-batch, el map lo que hace es aplicar una función que nosotros definamos a cada registro, por ejemplo, la función 
+“enrichmentData”, queremos aplicar esta función a cada uno de estos registros del micro-batch, ahora la pregunta es y, ¿cómo la 
+queremos aplicar? ¿esto es como un bucle for? claro que no, se supone que estamos en un Clúster de Big data en donde podemos 
+aplicar esta función de manera paralela a varios registros a la vez, eso es lo que hace esta función “map”, un for paralelo. 
+Ahora la pregunta es ¿qué tan paralelo? tendríamos que tunear nuestro código en Spark, por ejemplo, podríamos levantar cuatro 
+Executors y el ‘map’ se va a aplicar de manera simultánea a estas cuatro partes del STREAM DE DATOS. Cada ‘for’ lo hace de manera 
+lineal, hace cuatro ‘for’ de manera simultánea. Queremos paralelizar más la ejecución, pues, entonces levantamos simplemente más 
+Executor y ahora el ‘map’ lo que va a hacer es aplicar  8 ‘for’ porque ahora tenemos más Containers. Eso es lo que está haciendo 
+el ‘map’ un for paralelizable. ese ‘for’ está aplicando la función que nosotros estamos definiendo, queremos encadenar más pasos 
+en nuestro proceso. Para no complicarnos, solamente lo estamos haciendo sobre una función, pero el truco es que sobre el 
+STREAM DE DATOS estamos aplicando este ‘map’. 
+
+Ahora si te das cuenta en el primer paso hemos aplicado una función que se llama ‘flatMap’, ¿qué es lo que hace este flatMap? en 
+la gran mayoría de casos, por ejemplo, tenemos 4 registros de ejemplo, el registro número uno es un ARRAY de JSON, el registro 
+número 2 es un ARRAY de JSON, el registro número 3 es un ARRAY de JSON, otra cosa completamente diferente sería si los datos 
+recibiéramos de esta manera: estos no son ARRAY de JSON simplemente son varios JSON uno tras otro. 
+
+                                                    ARRAYS DE JSON
+             ___________________________________________________________________________________________________
+            |                                                                                                   |
+            |   [{"ID_PERSONA":90,"ID_EMPRESA":2,"MONTO":2660},{"ID_PERSONA":98,"ID_EMPRESA":1,"MONTO":2107},   |
+            |    {"ID_PERSONA":98,"ID_EMPRESA":4,"MONTO":1801},{"ID_PERSONA":15,"ID_EMPRESA":2,"MONTO":3570},   |
+            |    {"ID_PERSONA":93,"ID_EMPRESA":10,"MONTO":3343},{"ID_PERSONA":13,"ID_EMPRESA":6,"MONTO":4462},  |
+            |    {"ID_PERSONA":15,"ID_EMPRESA":3,"MONTO":3366},{"ID_PERSONA":2,"ID_EMPRESA":3,"MONTO":3483},    |
+            |    {"ID_PERSONA":64,"ID_EMPRESA":3,"MONTO":2212},{"ID_PERSONA":83,"ID_EMPRESA":6,"MONTO":666}]    |
+            |                                                                                                   |    
+            |   [{"ID_PERSONA":96,"ID_EMPRESA":5,"MONTO":2898},{"ID_PERSONA":92,"ID_EMPRESA":7,"MONTO":1981},   |
+            |    {"ID_PERSONA":18,"ID_EMPRESA":2,"MONTO":4331},{"ID_PERSONA":93,"ID_EMPRESA":9,"MONTO":4099},   |
+            |    {"ID_PERSONA":8,"ID_EMPRESA":7,"MONTO":4202},{"ID_PERSONA":83,"ID_EMPRESA":2,"MONTO":2265},    |
+            |    {"ID_PERSONA":94,"ID_EMPRESA":2,"MONTO":2991},{"ID_PERSONA":8,"ID_EMPRESA":1,"MONTO":2062},    |
+            |    {"ID_PERSONA":82,"ID_EMPRESA":9,"MONTO":1493},{"ID_PERSONA":73,"ID_EMPRESA":6,"MONTO":3805}]   |
+            |                                                                                                   |
+            |   [{"ID_PERSONA":10,"ID_EMPRESA":8,"MONTO":4253},{"ID_PERSONA":27,"ID_EMPRESA":6,"MONTO":3141},   |
+            |    {"ID_PERSONA":26,"ID_EMPRESA":3,"MONTO":1185},{"ID_PERSONA":76,"ID_EMPRESA":3,"MONTO":1947},   |
+            |    {"ID_PERSONA":14,"ID_EMPRESA":7,"MONTO":1605},{"ID_PERSONA":62,"ID_EMPRESA":10,"MONTO":4093},  |
+            |    {"ID_PERSONA":22,"ID_EMPRESA":7,"MONTO":1985},{"ID_PERSONA":77,"ID_EMPRESA":9,"MONTO":3142},   |
+            |    {"ID_PERSONA":68,"ID_EMPRESA":8,"MONTO":1625},{"ID_PERSONA":86,"ID_EMPRESA":1,"MONTO":1179}]   |
+            |                                                                                                   |
+            |   [{"ID_PERSONA":15,"ID_EMPRESA":7,"MONTO":564},{"ID_PERSONA":35,"ID_EMPRESA":5,"MONTO":547},     |
+            |    {"ID_PERSONA":84,"ID_EMPRESA":3,"MONTO":3753},{"ID_PERSONA":97,"ID_EMPRESA":9,"MONTO":294},    |
+            |    {"ID_PERSONA":99,"ID_EMPRESA":7,"MONTO":641},{"ID_PERSONA":54,"ID_EMPRESA":1,"MONTO":2526},    |
+            |    {"ID_PERSONA":1,"ID_EMPRESA":6,"MONTO":1833},{"ID_PERSONA":83,"ID_EMPRESA":9,"MONTO":2397},    |
+            |    {"ID_PERSONA":91,"ID_EMPRESA":10,"MONTO":3789},{"ID_PERSONA":40,"ID_EMPRESA":4,"MONTO":457}]   |
+            |___________________________________________________________________________________________________|
+
+
+                                              ESTO NO ES UN ARRAY DE JSON
+             ___________________________________________________________________________________________________
+            |                                                                                                   |
+            |    {"ID_PERSONA":15,"ID_EMPRESA":7,"MONTO":564},{"ID_PERSONA":35,"ID_EMPRESA":5,"MONTO":547},     |
+            |    {"ID_PERSONA":84,"ID_EMPRESA":3,"MONTO":3753},{"ID_PERSONA":97,"ID_EMPRESA":9,"MONTO":294},    |
+            |    {"ID_PERSONA":99,"ID_EMPRESA":7,"MONTO":641},{"ID_PERSONA":54,"ID_EMPRESA":1,"MONTO":2526},    |
+            |    {"ID_PERSONA":1,"ID_EMPRESA":6,"MONTO":1833},{"ID_PERSONA":83,"ID_EMPRESA":9,"MONTO":2397},    |
+            |    {"ID_PERSONA":91,"ID_EMPRESA":10,"MONTO":3789},{"ID_PERSONA":40,"ID_EMPRESA":4,"MONTO":457}    |
+            |___________________________________________________________________________________________________|
+
+
+Dependiendo de sí la fuente de datos te envía los datos dentro de un ARRAY, como que también te los pueden enviar sueltos, va 
+a depender de la fuente datos, ya no somos adivinos, por ejemplo, hay algunas funciones del API de Facebook que la data, los 
+comentarios, los pone en un ARRAY y por alguna razón hay otras funciones que los comentarios no te los entrega en ARRAY, si no, 
+te lo entrega en cadenas de diccionarios (JSON) y eso significa que son variables diferentes, un ARRAY es un registro una 
+variable y una cadena de un diccionario (JSON) son registros de muchas variables. Pero para que no nos compliquemos, si cada 
+registro entregado por la fuente de datos es un ARRAY, tenemos que utilizar un ‘flatMap’. Básicamente lo que hace es sacar los 
+elementos dentro del ARRAY para que los podamos procesar uno a uno. Si por otro lado la fuente de datos te envía no ARRAY, si no, 
+así directamente varios JSONs que no están contenidos dentro de un ARRAY, ahí lo que tendríamos que aplicar es un ‘map’ y no un 
+‘flatMap’. Eso ya va a depender de la fuente de datos, nosotros estamos esperando un ARRAY así que sería un ‘flatMap’. Una vez 
+aplicado el ‘flatMap’, lo que hace es dejar la data lista para que luego lo puedas seguir encadenando con funciones ‘map’ una 
+tras otra. De ahí el resto es ‘map’ y aplicar las lógicas que queramos. 
+
+Por último hay que abrir el grifo, recordemos que “stream” es el agua que sale del grifo pero el grifo es “ssc”, así que ¿cómo 
+se inicializa el grifo? a SPARK STREAMING CONTEXT (“ssc”) le decimos abre el grifo: 
+
+                                             ________________________________
+                                            |                                |    
+                                            |   -- Iniciamos el programa --  |
+                                            |                                |
+                                            |   ssc.start()                  |
+                                            |________________________________|
+
+
+Además, ya sabemos que los procesos de tiempo real son permanentes, que nunca se van a terminar, ¿cómo le indicamos que este 
+STREAM DE DATOS (“stream”) va a estar permanentemente recibiendo datos del grifo?
+
+                                             _______________________________________
+                                            |                                       |    
+                                            |   -- Esperamos hasta que finalice --  |
+                                            |                                       |
+                                            |   ssc.awaitTermination()              |
+                                            |_______________________________________|
+
+
+Un punto final, para aplicar las lógicas de negocio con la linea de código (stream.flatMap(…..)…) es suficiente, pero yo quiero 
+que, como estamos probándolo, quiero que se imprima en pantalla también, así que Spark Streaming te da una función utilitaria 
+para imprimir lo que se está procesando en pantalla. Inmediatamente después de nuestra cadena de procesos vamos a hacer lo 
+siguiente: 
+                         ______________________________________________________________
+                        |                                                              |   
+                        |   -- Procesamiento de los datos --                           |                                           
+                        |                                                              |                                           
+                        |   stream.flatMap(lambda register : formatData(register)).\   | 
+                        |   map(lambda register : enrichementData(register)).\         | 
+                        |   pprint()                                                   | 
+                        |______________________________________________________________|
+
+
+Esta función va a implementar el output de toda la cadena de proceso.      
+
+
+Punto importante, una cosa es que yo detenga la ejecución del Gateway, recordemos que todo este código vive en el Getway 
+(se refiere al código para la implementación del Consumer que lo está trabajando desde Jupyter), detengamos el Getway. Lo que 
+hemos hecho aquí es detener el Getway, porque este STREAM DE DATOS (stream.flatMap(…)…) recordemos que dónde se está ejecutando, 
+se está ejecutándo en el Clúster, no en el Getway. ¿Cómo podemos detener la ejecución de eso que se está ejecutando en el Clúster?
+El STREAM DE DATOS se ejecuta sobre el Kernel de Big data que estemos trabajando, ya, para no complicarnos siempre vamos a tener 
+una opción aquí en Jupyter: Kernel --> Restart & Clear Output. Hay que reiniciar ese Kernel, el Kernel que estamos usando es el 
+de Spark que está en Big data, Júpiter ya tiene todo esto configurado. Al seleccionar esta opción, es en ese momento que recién 
+se ha detenido el proceso, no solamente basta conocer la actividad acá, tienes que reiniciar el Kernel de Spark que está en el 
+Clúster que está corriendo tu proceso. 
+
+Otro punto importante antes de leer datos desde Hbase, el “formatData()” está mal escrito aquí, porque, no está casteando 
+potenciales errores, acá nosotros tranquilamente tenemos la garantía de que los JSON son correctos, pero por ahí siempre va a 
+pasar que hay un JSON que esta mal, que le falta cerrar un paréntesis, que le falta una coma, que le falta una llave, siempre va 
+a haber un JSON que va a romper el esquema, así que para evitar esos problemas, toda la lógica dentro de la función “formatData()”
+tenemos que tenerlo casteado de la siguiente manera:
+
+                     _______________________________________________________________________
+                    |                                                                       |  
+                    |   def formatData(register):                                           | 
+                    |                                                                       |
+                    |       try:                                                            |    
+                    |                                                                       |      
+                    |           registerValue = register[1]                                 |  
+                    |           registerFormatted = json.loads(registerValue)               |
+                    |                                                                       |                                                                                 
+                    |       except Exception as e:                                          |
+                    |                                                                       |
+                    |           registerFormatted = []                                      |    
+                    |                                                                       |  
+                    |       return registerFormatted                                        |    
+                    |                                                                       |
+                    |_______________________________________________________________________|

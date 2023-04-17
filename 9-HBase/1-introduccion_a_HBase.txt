@@ -1,0 +1,31 @@
+INTRODUCCION A HBASE
+====================
+
+Concepto
+--------
+
+HBASE es una base de datos de alta concurrencia (porque soporta el concepto de Storm data), de baja latencia (porque 
+es en tiempo real), distribuida (porque vive en un clúster) y NoSQL (porque aquí para HBase no puedes usar sintaxis 
+SQL, vamos a tener que usar un API REST) y por supuesto NoSQL recuerden que significa “Not Only SQL”, no solo SQL. 
+HBase por medio de HIVE puede agregar funcionalidades de SQL, pero hablemos propiamente de Hbase. HBase se ejecuta 
+sobre HDFS, ¿qué significa esto? que si en HDFS tenemos un sistema de archivos de 100 TB, pues HBase va a poder 
+aprovechar estos 100 TB pero en esas escrituras y lecturas las va a hacer en tiempo real. Sobre HBase tranquilamente 
+vamos a poder almacenar billones de registros sin que haya degradación en los tiempos de consulta, si hay 100000 
+registros, HBase va a responder tan bien como si hubiesen 10000 millones o 10000 billones o 10000 trillones de registros, 
+HBase te va a garantizar una latencia en la consulta muy rápida, pero te va a poner una gran limitante solamente vas 
+a poder consultar por un campo, conocido como el campo PRIMARY KEY o ROW KEY. Hbase se encuentra basada en la base de 
+datos Big table, que es la tecnología que usan Google por detrás para hacer consultas muy rápidas y por supuesto está 
+desarrollado en Java. 
+
+
+Objetivo fundamental
+--------------------
+
+¿Cuál es el objetivo fundamental que tiene Hbase? pues en Hbase, en esencia puedes escribir y leer muy, pero muy rápido, 
+en el orden de los microsegundos. Estas escrituras no se hacen en el RAM se hacen en el disco duro, por lo tanto, viven de 
+manera permanente. Noten el detalle, HBase puede escribir y leer datos, pero no puede procesarlos en tiempo real, para 
+eso vamos a usar SPARK STREAMING. Para entender esto de escribir y leer, escribir sería como hacer un INSERT INTO y leer 
+sería como decirle SELECT * FROM WHERE y solamente el WHERE lo puedes hacer en función de la Primary Key que definas para 
+tu tabla, si tu tabla tiene más campos no puedes consultar por los otros campos en Hbase, solamente se puede consultar por 
+la primary key. De hecho, justamente por poner estas limitantes es que Hbase es muy rápido, porque, tiene una tabla indexada 
+en función de estas primarys keys. 

@@ -1,0 +1,71 @@
+IMPLEMENTACION SQOOP
+====================
+
+  BBDD MySQL                                     HIVE
+
+Tenemos dos tablas                        En Hive tenemos dos tablas
+que ya le hemos insertado                 que se encuentran vacias.  
+datos
+ ____________                                ____________   
+|  ________  |                              |  ________  |
+| |  |  |  | |                              | |  |  |  | |
+| |--|--|--| |            SQOOP             | |--|--|--| |
+| |__|__|__| |  ------------------------->  | |__|__|__| | 
+|  ________  |                              |  ________  |   
+| |  |  |  | |                              | |  |  |  | |  
+| |--|--|--| |                              | |--|--|--| |
+| |__|__|__| |                              | |__|__|__| | 
+|____________|                              |____________|
+
+Vamos a utilizar SQOOP para hacer un 'put' en las tablas que se encuentran en HIVE, 
+sin necesidad de utilizar un "Gateway" intermedio. 
+
+Pregunta: ¿cuantos containers va instanciar Sqoop para ingestar los datos de manera
+          paralela?
+
+Hay muchas recomendaciones, pero la más fácil de aplicar es que uno como desarrollador
+no podemos indicarle el número de containers de paralelización, pero lo que si podemos
+indicarle es una optimización en función de un campo. ¿Esto que significa? Vamos a 
+cortar la tabla que queremos ingestar en función de un campo que tenga alta variabilidad
+en su valor, por ejemplo, un campo "ID". Como es un identificador literalmente Sqoop
+podria hacer la ingesta en paralelo de cada registro por separado, por que cada registro
+tiene un identificador único. Obviamente Sqoop no lo hará de esa manera, porque el 
+propio Sqoop va a optimizar la forma, como por ejemplo (quizas) los 'id' del 1 al 100
+irán a un container, los que van del 101 al 200 en otro container y asi suesivamente.
+
+Otro cosa importante para tener en cuenta es que Sqoop hace las conexiones a las bases
+de datos por medio de "jdbc". Por lo tanto, debemos indicarle cual es el binario de 
+conexion 'jdbc' que existe a la base de datos. ¿Esto que significa? En el Gateway 
+podemos crear una ruta especial que se llame, por ejemplo, '/binarios' y donde podemos
+subir el driver de conexion "mysql-connector-java-8.0.12.jar" para MySQL. Obviamente, en 
+la vida real quizas utilicemos muchas conexiones a distintas BBDD, por tanto, Sqoop nos
+dirá que podrá conectarse a cualquiera de ellas, siempre y cuando tengan un conector 
+"jdbc". Por tanto, dependiendo la base de datos a la cual nos queramos conectar vamos a
+tener que solicitar que nos pasen el "jdbc" de esa BBDD. En la vida real este driver 
+(archivo JAR) debe estar instalado en todos los nodos del Cluster para poder utilizarlo,
+si no, no podremos utilizarlo y el sistema nos devolvera un error. En la vida real
+deberiamos indicarle al encargado de infraestructura que instale el driver de la BBDD en
+todos los servidores, pero eso no se hará de un dia para otro, probablemente tome algo
+de tiempo. Por tanto, podemos utilizar esta linea que tiene linux:
+
+                        # Agregamos el JDBC de MySQL al PATH
+    export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:"/binarios/mysql-connector-java-8.0.12.jar"
+
+para de que manera 'temporal' y 'solo para nuestra sesión de usuario', cargar este driver.
+De esta manera lo estaremos cargando en los binarios de Hadoop, y estará disponible para
+que lo utilicemos.
+
+Otro punto importante es que nos podriamos preguntar el ¿por qué ingestamos los datos de
+la BBDD como una tabla de TEXTFILE (texto plano)? ¿por qué no realizamos la ingesta 
+directamente en PARQUET o en AVRO, y asi nos ahorramos el paso intermedio de la etapa
+de LANDING_TMP y luego modificarlo a LANDING? Sqoop si puede hacer esto, pero no se 
+recomienda utilizar esa funcionalidad, por el hecho de la "incompatiblidad de versiones". 
+Para ponerlo en términos simples, puede ser que tengamos la versión 1.1x de Sqoop la cual
+es compatible con la version 2.7 de Parquet, y en HIVE, dado ue tenemos la version de Spark
+2.3x, la version compatible es la 2.4 de Parquet. Entonces, Sqoop va a escribir un Parquet
+cuya version no es compatible con la que realmente soportan las tablas en HIVE, y nosotros
+vamos a lanzar consultas y no podremos ver nuestras tablas Parquet, esto dado que Sqoop 
+esta trabajando con otra version. En resumen, para evitar problemas se utiliza el formato 
+estándar de captura de datos Batch, el "Texto plano", porque el 'Texto plano' siempre será
+lo mismo, no existen versiones para el 'Texto plano'. Por tanto, debemos ingestarlo a tablas
+albergadas en LANDING_TMP.

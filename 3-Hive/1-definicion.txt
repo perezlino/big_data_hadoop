@@ -1,0 +1,75 @@
+HIVE
+====
+
+==> Hive nos va a permitir asociar metadatos estructurados a archivos 
+    estructurados sobre HDFS. Pero, ¿que significa asociar metadatos?
+    Que ya no vamos a ver el archivo como tal, si no, lo visualizaremos
+    como una tabla. Ademas HIVE nos permite procesar estas tablas con
+    sintaxis SQL. Por lo que, si conocemos el lenguaje SQL ya podemos
+    ejecutar Logicas de negocio con HIVE. Pero algo importante, es que
+    una cosa es que nosotros sepamos implementar nuestras Logicas de 
+    negocio con SQL y otra cosa completamente diferente, es saber como
+    tunear esos procesos sobre BIG DATA. Por tanto, se deben conocer
+    ciertos patrones antes de procesar nuestros archivos.
+
+Es una infraestructura de almacenamiento batch de datos construida 
+sobre Hadoop, que permite ejecutar procesos en diversos motores de 
+procesamiento por medio de sintaxis SQL.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+OBJETIVO FUNDAMENTAL DE HIVE
+============================
+
+1.- Ofrecer una capa "fachada" (patrón facade) para ejecutar procesos con sintaxis SQL
+                                                    ----------------------------------
+2.- Servir de repositorio central de metadata
+              -------------------------------
+
+---------------------------------------------------------------------------------------------------------------- 
+
+Lo que HIVE realmente hace es que a un directorio de HDFS, que puede tener 1 o varios archivos, se le asocia
+una tabla.
+                     _________________________________________________________
+                    |   __________                                            |      
+                    |  |          |    DIRECTORIO                             |      
+                    |  |-------------------------------------------------     |  
+                    |  |     ________       ________       ________      |    |  60 Registros en total
+                    |  |    |        |     |        |     |        |     |    |  
+                    |  |    |  file  |     |  file  |     |  file  |     |    |  
+                    |  |    |________|     |________|     |________|     |    |  
+                    |  |   10 Registros   20 Registros   30 Registros    |    |  
+                    |  |                                                 |    |  
+                    |  |_________________________________________________|    |   
+                    |_________________________________________________________|
+
+
+Por tanto, las tablas HIVE se asocian a un directorio y cada archivo que este en ese directorio lo vamos a poder
+ver como parte de un registro de esa tabla. Importante saber que estos archivos DEBEN TENER LAS MISMAS ESTRUCTURAS.
+En el caso de que sean archivos semi-estructurados, HIVE es capaz de procesar datos semi-estructurados, pero no
+se recomienda. Una mejor herramienta para eso es SPARK.
+
+----------------------------------------------------------------------------------------------------------------
+
+CARACTERISTICAS DE HIVE
+=======================
+
+1. Tiene una sintaxis SQL conocida como "HiveQL" que manipula los archivos de HDFS
+2. Nos abstrae de la necesidad de implementar programar con MapReduce, las implementaciones se hacen con SQL lo cual 
+   facilita el desarrollo y el mantenimiento de los programas
+3. Es una tecnología "BATCH", ya que los queries están orientados a correr por minutos u horas.
+4. Soporta diferentes formatos de almacenamiento como TEXTFILE, ORC, AVRO y PARQUET.
+5. Permite la creación de UDFs (funciones definidas por el usuario)
+6. HIVE es un centralizador de metadata
+
+----------------------------------------------------------------------------------------------------------------
+
+LA CONSOLA DE HIVE
+==================
+
+Existen dos consolas en Hive:
+
+1. Hive CLI: Primera consola de Hive, actualmente en desuso ya que sólo permite una conexión a la vez.
+2. Beeline: Consola de Hive que funciona por medio de una conexión JDBC. Es la que actualmente se usa
+
+----------------------------------------------------------------------------------------------------------------

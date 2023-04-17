@@ -1,0 +1,231 @@
+FILOSOFIA DE BIG DATA: LAS 5V
+=============================
+
+Recordar que BIG DATA es un 'marco de trabajo' (conceptos + tecnologías) que permite 
+procesar GRANDES VOLUMENES (Volumen) de datos, de DIFERENTES ESTRUCTURAS O CON CARENCIA
+DE ESTAS (Variedad), que pueden VARIAR EN EL TIEMPO (Variabilidad), a GRANDES
+VELOCIDADES (Velocidad) que generen VALOR AL NEGOCIO (Valor).  
+
+- Valor
+- Volumen
+- Velocidad
+- Variedad -------------------> Datos estructurados, semi-estructurados y no estructurados
+- Variabilidad ---------------> Hace referencia al cambio en el valor del dato (Hoy me gusta tu servicio
+                                y mañana no) o el cambio en la estructura del dato (el dia de hoy nuestra
+                                tabla tiene 3 campos y mañana pueda que tenga 4 campos)
+
+                                Como se traduce desde el punto de vista tecnico:
+
+                                - Una 'VARIABILIDAD ALTA' en 'DATOS ESTRUCTURADOS' se va a traducir en un
+                                  esquema 'AVRO' en HIVE.
+
+----------------------------------------------------------------------------------------------------------------                                  
+
+VOLUMEN
+--------
+
+Nosotros como desarrolladores le tenemos que indicar al Cluster cuanto recurso queremos separar para 
+nuestro proceso. El Cluster no lo sabe, por tanto, el desarrollador debe indicarselo.
+
+El desarrollador solo va a ver un "Gran disco duro virtual" de 1000 Tera Bytes.
+
+ ______________________________________________________________________________________________________________
+|CLUSTER COMPUTACIONAL  (Tenemos 10 Servidores y cada Servidor tiene 20 Discos (o Nodo o computadora))         |                  
+|                                                                                                              | 
+|         Servidor             Servidor                                                                        |                         
+|    _____100_TB_______   _____100_TB_______   _____100_TB_______   _____100_TB_______   _____100_TB_______    | 
+|   | 5 TB X 20 Discos | | 5 TB X 20 Discos | | 5 TB X 20 Discos | | 5 TB X 20 Discos | | 5 TB X 20 Discos |   | 
+|   |        ______    | |        ______    | |        ______    | |        ______    | |        ______    |   | 
+|   |       |  ◯  |   | |       |  ◯  |   | |       |  ◯  |   | |       |  ◯  |   | |       |  ◯  |   |   |  
+|   |       |______|   | |       |______|   | |       |______|   | |       |______|   | |       |______|   |   |   
+|   |__________________| |__________________| |__________________| |__________________| |__________________|   | 
+|                                                                                                              | 
+|    _____100_TB_______   _____100_TB_______   _____100_TB_______   _____100_TB_______   _____100_TB_______    | 
+|   | 5 TB X 20 Discos | | 5 TB X 20 Discos | | 5 TB X 20 Discos | | 5 TB X 20 Discos | | 5 TB X 20 Discos |   | 
+|   |        ______    | |        ______    | |        ______    | |        ______    | |        ______    |   | 
+|   |       |  ◯  |   | |       |  ◯  |   | |       |  ◯  |   | |       |  ◯  |   | |       |  ◯  |   |   |  
+|   |       |______|   | |       |______|   | |       |______|   | |       |______|   | |       |______|   |   | 
+|   |__________________| |__________________| |__________________| |__________________| |__________________|   | 
+|                                                                                                              | 
+|    _________      _______________________                                                                    | 
+|   |_________|    |                       |                                                                   | 
+|    _________     |        1000 TB        | 1 PETABYTE                                                        | 
+|   |_________|    |_______________________|                                                                   | 
+|                                                                                                              | 
+|                                                                                                              | 
+|______________________________________________________________________________________________________________|
+
+¿Nos quedamos cortos? =====> Agregar más 'nodos' o 'discos'
+
+
+Caso práctico
+-------------
+
+Si una Empresa ha dicho que cada Servidor tenga 100 TB de disco duro. Una cosa es que tengamos:
+
+a) 10 Discos Duros X 10 TB
+b) 20 Discos Duros X 5 TB
+
+¿Que opcion es mejor? ==> En BIG DATA 'SIEMPRE NOS VA A CONVENIR' la 'MAYOR CANTIDAD DE DISCOS DUROS'
+                          Es decir, la opcion B). Porque entre mas discos duros se tengan, mayor la
+                          paralelizacion de la lectura y de la escritura.
+
+                          Ejemplo:
+                          --------
+
+                          Si tenemos un archivo de 100 GB y tenemos un Cluster configurado con la opcion
+                          a). De manera automatica, el Cluster paralelizara el archivo entre los diez
+                          discos duros, y se distribuira a cada uno 10 GB. Mientras que si el Servidor
+                          esta configurado con la opcion b), el Cluster paralelizara el archivo entre los
+                          20 discos duros y se distribuira a cada uno 5 GB, haciendolo mas rapido aun, 
+                          dado que ya no estamos escribiendo 10 GB en un disco (nodo o computadora), si no,
+                          dividimos el archivo en 20 partes, y estamos escribiendo 5 GB en un disco, y esto
+                          de manera paralela.
+
+----------------------------------------------------------------------------------------------------------------                                  
+
+VELOCIDAD
+---------
+
+FUENTES DE DATOS          INGESTA             ALMACENAMIENTO             PROCESAMIENTO             CONSULTA
+
+                                                       ____________________________________________________
+                                                      |                                                    | 
+                          _______          ___________|___________     ___________________                 | 
+Datos de islas  ----.    |       |        |  _________˅_________  |   |                   |        ________|_______
+transaccionales     |--->| Batch |--------->|                   | |   |       Batch       |       |        |       | 
+                ----'    |_______|        | |       Batch       |---------->   🔃  <---------.       ___________   
+Video           ----.     ___________     | |___________________| |   |                   |   |   |  | ○ ○ ○    |  |  
+                    |--->|           |    |  ___________________  |   |                   |   |---|  |----------|  |
+Datos Real Time ----'    | Real Time |----->|                   | |   |     Real Time     |   |   |  |__________|  | 
+                         |___________|    | |     Real Time     |---------->   🔃  <---------'                     
+                                          | |___________________| |   |                   |       |         |      | 
+                                          |___________˄___________|   |___________________|       |_________|______|
+                                                      |                                                     |  
+                                                      |_____________________________________________________|  
+
+        |_____________________|  |_____________________|  |_____________________|  |_____________________|
+                    |                       |                        |                        |
+         Velocidad de Ingesta         Velocidad de             Velocidad de             Velocidad de
+                                     Almacenamiento            Procesamiento              Consulta
+
+
+Hay que tener claro que existen:
+
+TIPOS DE VELOCIDAD:
+- Batch 
+- Real Time 
+
+y MOMENTOS DE VELOCIDAD: Entender el concepto de 'Momento de velocidad' nos permite identificar el cuello de botella
+                         para que podamos dedicarnos a gastar esfuerzos en donde debemos mejorar.
+- Velocidad de Ingesta
+- Velocidad de Almacenamiento
+- Velocidad de Procesamiento
+- Velocidad de Consulta
+
+----------------------------------------------------------------------------------------------------------------                                  
+
+VARIEDAD
+--------
+
+La variedad hace referencia al tipo de estructura del dato.
+
+FUENTES DE DATOS
+                      _____________________________
+                     |    DATA ESTRUCTURADA        | 
+Datos de islas       | Misma estructura para todos |    ========>   Tablas      CSV      XML   
+transaccionales      | los registros               | 
+                     '-----------------------------'
+                      _______________________________   
+                     |   DATA SEMI-ESTRUCTURADA      | 
+Datos Real Time      | Cada registro tiene su propia |  ========>   JSON        XML
+                     | estructura                    |   
+                     '-------------------------------' 
+                      _____________________________
+                     |   DATA NO ESTRUCTURADA      |
+Video                | No tiene estructura ni      |    ========>   VIDEOS     EMAIL     DOCUMENTOS     LENGUAJE
+                     | registro                    |   
+                     '-----------------------------' 
+
+
+NOTA TECNICA
+------------
+
+==> En la vida real, dentro de lo posible tenemos que hacer una 'CONVERSION DE NIVEL DE ESTRUCTURA'. Esto se 
+    refiere a que si la naturaleza original de nuestros datos es, por ejemplo, 'semi-estructurado', con alguna
+    tecnica vamos a tener que llevarlo al siguiente nivel de estructura, es decir, al NIVEL ESTRUCTURADO.
+    Si la naturaleza de nuestros datos es 'no estructurada', vamos a tratar de llevarlo al siguiente nivel de
+    estructura, es decir, al NIVEL SEMI-ESTRUCTURADO. Importante saber que está PROHIBIDO EL DOBLE SALTO, es
+    decir, si la naturaleza de los datos es 'no estructurada', transformarlo a 'semi-estructurada' y luego esta
+    data transformada a 'semi-estructurada' llevarla al 'nivel estructurada'. De poder, se puede, pero no se
+    recomienda.
+
+----------------------------------------------------------------------------------------------------------------                                  
+
+VARIABILIDAD
+------------     
+
+- La variabilidad hace referencia al posible cambio del valor del dato.
+- En este ejemplo, existe una VARIABILIDAD en la FUENTE DE DATOS.
+
+ _____                                                        ________
+|     |                                                    | |        |
+| HOY |                                                    | | MAÑANA |
+|_____|                                                    | |________|
+                                                           | 
+FUENTES DE DATOS                                           | FUENTE DE DATOS
+                                                           | 
+                      _____________________________        |                       _____________________________
+Datos de islas       |  Numero telefonico del      |       | Datos de islas       |  Numero telefonico del      |
+transaccionales      |  cliente: 999999999         |       | transaccionales      |  cliente: 888888888         |
+                     '-----------------------------'       |                      '-----------------------------' 
+                      _____________________________        |                       _____________________________  
+                     |  El servicio de Claro es    |       |                      |  El servicio de Claro es    | 
+Datos Real Time      |  muy bueno 🙂                        Datos Real Time         pesimo 🙁                  | 
+                     '-----------------------------'       |                      '-----------------------------'
+                      _____________________________        |                      _____________________________  
+Video                |  Noticia                    |       | Video               |  Noticia                    |
+                     |  Se inauguro un nuevo       |       |                     |  El puente nuevo colapsó    |    
+                     |  puente                     |       |                     '-----------------------------'     
+                     '-----------------------------'       | 
+                                                           |   
+
+Siempre que desarrollemos el COMPONENTE DE INGESTA
+debemos pensar en el SUB-COMPONENTE DE ACTUALIZACION
+DE DATOS:
+
+COMPONENTE DE INGESTA                      REPOSITORIO
+ __________________________              ______________________________________
+|                          |            |                                      | 
+|       SUB COMPONENTE     |            | Celular cliente: 9̶-9̶-9̶ 9-9-9-9-9-9   |  (valor entre guiones es valor tachado
+|     DE ACTUALIZACION DE  |            |                  8 8 8 8 8 8 8 8 8   |   valor anterior, valor pasado)
+|            DATOS         |            |                                      | 
+|         __________       |            | Servicio-de-Claro-es-bueno           | 
+|        |          |      |            | Servicio de Claro es pesimo          | 
+|        |          |------------------>|                                      |   
+|        |          |      |            | Nuevo-puente-se-inauguró             |   
+|        |__________|      |            | Nuevo puente colapsó                 | 
+|                          |            |                                      |   
+|__________________________|            |______________________________________|
+
+==> En palabras faciles, lo que hacen estos 'Sub-componentes de actualizacion' es que de cuando en cuando
+    es conectarse a las 'Fuentes de datos' y preguntar ¿el dato ha cambiado en la fuente? y si la respuesta
+    es positiva, volvemos a ingestarlos y los actualizamos.
+
+==> Entonces, en resumen, cual es el punto importante de la 'Variabilidad', es que si en la 'Fuente de datos'
+    hay un 'cambio' en el 'valor' o tambien las 'estructuras', nuestro repositorio NO SE VA A ENTERAR, debemos
+    volver a ingestar esa data de una u otra manera.
+
+----------------------------------------------------------------------------------------------------------------                                  
+
+VALOR
+-----
+
+Todos nuestros esfuerzos deben de traducirse en una ganancia para la organización.
+
+- Aumentan las ganancias
+- Disminuyen las pérdidas
+- Ahorro de tiempo
+- Incremento de satisfacción
+
+----------------------------------------------------------------------------------------------------------------  

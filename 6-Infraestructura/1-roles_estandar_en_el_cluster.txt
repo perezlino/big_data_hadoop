@@ -1,0 +1,71 @@
+ROLES DE LOS SERVIDORES EN EL CLUSTER
+=====================================
+
+HAY SERVIDORES CON DISTINTOS ROLES (3 ROLES DIFERENTES EN EL CLUSTER):
+
+- GETWAY
+- MASTER
+- SLAVE
+                       1           2            3 
+                 ______________________________________
+                |            |            |            |
+                |   GETWAY   |   MASTER   |    SLAVE   | 
+                |____________|____________|____________|
+                |            |            |            |   
+                |            |            |            |   
+                |            |            |            |   
+                |            |            |            |   
+                |            |            |            |   
+                |____________|____________|____________|  
+
+Getway
+------
+Un nodo Getway es en el cual los usuarios se conectan y levantan consolas o herramientas gráficas.
+Por ejemplo, puede que en un nodo Getway se encuentren todas las consolas de lineas de comandos y
+en otro Getway este instalado la interfaz visual 'HUE' y en otro Gateway este instalada otra 
+herramienta visual. O puede que tengamos 3 instancias de 'HUE' instaladas en 3 nodos Getway distintos,
+en el caso de que si se cae una instancia, nos conectamos a otro Gateway y asi seguir trabajando. Ese
+es el objetivo del Gateway, pero la pregunta es ¿cuantos Gateways necesitamos en nuestro Cluster?
+
+
+Preguntas que debemos hacernos
+------------------------------
+
+La misma pregunta, ¿cuantos nodos 'Master' y 'Slave' necesitamos para nuestro 'Cluster'? Otra pregunta
+que nos podemos hacer es, ¿cuales son las caracteristicas 'Hardware' que se necesitan para un nodo
+'Gateway', un nodo 'Master' y un nodo 'Slave'?. Con Hardware nos referimos a cuanta RAM, CPU y Disco
+duro. Por otro lado sabemos que el procesamiento se realiza en los nodos esclavos, por tanto, deben
+ser potentes, deben de tener mucha RAM, CPU y Disco duro. En cambio, en el Gateway no se va a procesar
+nada, solo es un puente conexión para los usuarios, por tanto, no va a requerir tanto Hardware.
+
+En resumen, debemos hacernos 2 preguntas:
+
+1.- ¿Cuantos nodos 'Gateway, ' Master', 'Metadata' y 'Slave' necesitamos para nuestro Cluster?
+2.- ¿Cuales seran las caracteristicas Hardware de cada nodo según su rol?
+
+Existe un nodo del cual no hemos hablado, y es el nodo que cumple el ROL DE METADATA:
+
+                       1           2              3             4
+                 _____________________________________________________
+                |            |            |               |           |  
+                |   GETWAY   |   MASTER   |    METADATA   |   SLAVE   |       
+                |____________|____________|_______________|___________|
+                |            |            |               |           |  
+                |            |            |               |           |    
+                |            |            |               |           |    
+                |            |            |               |           |    
+                |            |            |               |           |    
+                |____________|____________|_______________|___________|
+
+
+Nosotros dijimos que habia un directorio HDFS y por encima le montamos una tabla HIVE que esta asociada
+a este directorio, de esa manera, por medio de SQL ya no vemos archivos por separado según directorio,
+lo vamos a ver como una tabla estructurada y lo vamos a poder procesar.
+
+Pero, ¿donde se guarda esa informacion que nos indica que tabla es que directorio? Eso se guarda en un
+nodo especial de METADATOS. Es un rol muy inportante dentro del Cluster. 
+
+Se debe entender tambien que es importante que cada servidor tiene que tener solamente un juego de 
+servicios asociados a un ROL. Esto quiere decir, que no podemos derivar servicios que llevan relación
+con el servicio Getway al servidor Master. Debe existir un orden, un gobierno computacional de servicios
+en el Cluster.

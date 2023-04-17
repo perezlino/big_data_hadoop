@@ -1,0 +1,128 @@
+ARQUITECTURA DE SERVICIOS
+=========================
+
+SERVICIOS DE HIVE
+=================
+
+       GATEWAY                 MASTER                 METADATA                      SLAVE
+ __________________      __________________      __________________     
+|<<Gateway>>       |    |<<Master>>        |    |<<Slave>>         |    
+|                  |    |                  |    |                  |    "HIVE no necesita esclavos",
+|- Gateway         |    |- Driver          |    |- Mestastore      |    el driver se encarga de convertir
+|                  |    |- HiveServer2     |    |  Database        |    los queries a procesos MapReduce 
+|__________________|    |__________________|    |__________________|    y le "delega el trabajo a Hadoop"
+                         __________________      __________________      
+                        |<<Master>>        |    |<<Slave>>         |    
+                        |                  |    |                  |   
+                        |- Metastore       |    |- Mestastore      |    
+                        |                  |    |  Database        |  
+                        |__________________|    |__________________|    
+                                                
+                                                
+DESCRIPCIÓN
+
+• Gateway: Nodo con la configuración de Hive y acceso a las shells (Hive CLI, Beeline)
+  -------
+• Driver: Compila y ejecuta los queries SQL
+  ------
+• HiveServer2:  Servicio que permite que múltiples clientes ejecuten queries sobre Hive.
+  -----------
+• Metastore: Servicio que gestiona los metadatos en Hive. 
+  ---------
+• Metastore Database: Base de datos relacional donde se almacenan los metadatos de Hive, 
+  ------------------  por ejemplo la ruta HDFS asociada a una tabla Hive.  
+
+---------------------------------------------------------------------------------------------------------------- 
+
+DISTRIBUCION DE LOS SERVICIOS DE HIVE ==> MODO EMBEBIDO
+=====================================
+
+ ___________________
+|<<Master>>         |    Todos los servicios están centralizados en un solo nodo. 
+|   _____________   |    Sólo se recomienda para entornos donde se hacen pequeñas pruebas
+|  |  Metastore  |  |    y nunca para un entorno productivo. Si este nodo falla, perdemos  
+|  |  Database   |  |    toda la metadata de Hive y por lo tanto todas las tablas
+|  |_____________|  |
+|         |         |
+|   ______|______   |
+|  |             |  |
+|  |  Metastore  |  |
+|  |_____________|  |
+|         |         |
+|   ______|______   |
+|  |             |  |
+|  | HiveServer2 |  |
+|  |_____________|  |
+|         |         |
+|   ______|______   |
+|  |             |  |
+|  |   Driver    |  |
+|  |_____________|  |
+|___________________|
+
+---------------------------------------------------------------------------------------------------------------- 
+
+DISTRIBUCION DE LOS SERVICIOS DE HIVE ==> MODO LOCAL
+=====================================
+
+ ___________________    ___________________
+|<<Master>>         |  |<<Master>>         |   
+|   _____________   |  |   _____________   |  La "base de datos del metastore" está separada del resto de
+|  |  Metastore  |  |  |  |  Metastore  |  |  servicios. De esta manera no dependemos de un único punto
+|  |  Database   |  |  |  |  Database   |  |  falla.
+|  |_____________|  |  |  |_____________|  |
+|__________\________|  |_________/_________|                 
+            \                   /
+             \_________________/
+             _________|_________
+            |   ______|______   |             En el modo local las "base de datos del Metastore" puede
+            |  |             |  |             configurarse para que trabaje con copias de seguridad.
+            |  |  Metastore  |  |
+            |  |_____________|  |
+            |         |         |
+            |   ______|______   |
+            |  |             |  |
+            |  | HiveServer2 |  |
+            |  |_____________|  |
+            |         |         |
+            |   ______|______   |
+            |  |             |  |
+            |  |   Driver    |  |
+            |  |_____________|  |
+            |___________________|
+
+---------------------------------------------------------------------------------------------------------------- 
+
+DISTRIBUCION DE LOS SERVICIOS DE HIVE ==> MODO REMOTO
+=====================================
+
+ ___________________    ___________________
+|<<Master>>         |  |<<Master>>         |   
+|   _____________   |  |   _____________   |  Aquí cada servicio se ejecuta sobre su propio nodo.
+|  |  Metastore  |  |  |  |  Metastore  |  |  
+|  |  Database   |  |  |  |  Database   |  |  
+|  |_____________|  |  |  |_____________|  |
+|__________\________|  |_________/_________|                 
+            \                   /
+             \_________________/
+             _________|_________
+            |<<Master>>         | 
+            |   ______|______   |             Es el modo más recomendado de ejecución para un Cluster
+            |  |             |  |             productivo.
+            |  |  Metastore  |  |
+            |  |_____________|  |
+            |_________|_________|
+                      |    
+                      |  
+             _________|_________
+            |<<Master>>         |
+            |   ______|______   |
+            |  |             |  |
+            |  | HiveServer2 |  |
+            |  |_____________|  |
+            |         |         |
+            |   ______|______   |
+            |  |             |  |
+            |  |   Driver    |  |
+            |  |_____________|  |
+            |___________________|

@@ -1,0 +1,175 @@
+1.- Descarga Hadoop
+
+Descargue este archivo: hadoop-3.3.4.tar.gz  
+
+PREPARAR EL SOFTWARE HADOOP
+===========================
+
+2.- En CentOS --> Abrir terminal 
+
+(Durante la instalación yo le di el nombre de usuario como "hadoop")
+
+3.- pwd --> /home/hadoop
+    ls 
+    cd Descargas ----> Nos deberia aparecer el archivo que descargamos: hadoop-3.3.4.tar.gz  
+
+4.- Desde 'Archivo' --> Abrimos una nueva pestaña (La llamaremos 'ventana 2') --> 
+    Y escribimos: cd /opt --> [hadoop@localhost opt]
+
+5.- En la ventana 2, escribo --> su - root --> ingreso Contraseña (catalina) --> [root@localhost ~]
+
+6.- En la ventana 2, luego, cd /opt --> mkdir hadoop --> chown hadoop hadoop
+
+7.- Desde la ventana 1 verificamos --> escribimos: cd /opt --> [hadoop@localhost opt]
+
+8.- Desde la ventana 1 escribo: ls -l --> Debe aparecer el directorio "hadoop"
+
+9.- Desde la ventana 1 escribo --> cd hadoop/ --> [hadoop@localhost hadoop]
+    Despues de ejecutar este comando nos encontramos en la ruta: /opt/hadoop/
+
+10.- Desde la ventana 1, dentro del directorio "hadoop" descomprimo el archivo descargado --> 
+     tar xvf /home/hadoop/Descargas/hadoop-3.3.4.tar.gz
+
+11.- Desde la ventana 1 -->  [hadoop@localhost hadoop] --> mv hadoop-3.3.4/* .
+     La ruta en la que se instalo Hadoop --> /opt/hadoop/hadoop-3.3.4
+     Con esto movemos todo lo que se encuentre dentro del directorio "/opt/hadoop/hadoop-3.3.4" al 
+     directorio "/op/hadoop"	 	
+	
+12.- Desde la ventana 1 --> [hadoop@localhost hadoop] --> rmdir hadoop-3.3.4/
+     Con este comando eliminamos el directorio "hadoop-3.3.4/" que se encontraba dentro de "/opt/hadoop/"
+
+-----------------------------------------------------------------------------------------------------------------------
+INSTALACIÓN JDK
+==============
+
+1.- Descargue el jdk-8u181-linux-x64.rpm (Java SE Develpment Kit 8u181 --> Linux x64)
+
+2.- Desde la ventana 2, verifico que este archivo se encuentre en el directorio "Descargas" -->
+    Desde la ruta inicial [root@localhost ~] --> escribo: cd /home/hadoop/Descargas/
+
+3.- Desde la ventana 2, escribo: ls -l --> tiene que aparecer el archivo "jdk-8u181-linux-x64.rpm" 
+
+4.- Desde la ventana 2 --> [root@localhost Descargas] --> rpm -ivh jdk-8u181-linux-x64.rpm
+
+5.- Desde la ventana 2 --> [root@localhost Descargas] --> alternatives --config java --> eleccion: 3
+    Con esto cambiamos la version de Java
+
+6.- Desde la ventana 2, verificamos la version de Java --> java -version 
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURACIÓN DE LAS VARIABLES DE ENTORNO
+=========================================
+
+1.- Desde la ventana 1, para ver los archivos ocultos --> [hadoop@localhost ~] --> ls -a
+
+2.- Desde la ventana 1, escribo --> gedit .bashrc --> Se abrirá un block de notas
+
+3.- En dicho block de notas escribimos: # User specific aliases and functions
+					export HADOOP_HOME=/opt/hadoop
+					export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+					export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+    Guardo los cambios y cierro el block de notas
+
+4.- Luego desde la ventana 1, si escribo --> cat .bashrc --> verificamos que esten las modificaciones que hicimos
+
+5.- Desde la ventana 1, escribo --> . ./.bashrc --> hadoop version	
+
+-----------------------------------------------------------------------------------------------------------------------
+COMPROBAR QUE HADOOP FUNCIONA
+=============================
+Vamos a ejecutar Hadoop en lo que se denomina "Modo STANDALONE", que viene a decir que vamos a utilizar un pequeño
+paquete de ejemplos que viene dentro del propio Hadoop, para ejecutar algo, en este caso un programa MapReduce.
+
+1.- Desde la ventana 1, escribo --> cd /opt/hadoop --> [hadoop@localhost hadoop]
+
+2.- Desde la ventana 1, escribo --> cd share/hadoop/mapreduce/ --> [hadoop@localhost mapreduce]
+	
+3.- Desde la ventana 1, escribo --> pwd --> /opt/hadoop/share/hadoop/mapreduce
+
+4.- Desde la ventana 1, escribo --> uname -a --> Veo informacion de mi maquina
+
+(En el caso de que hubiesemos dado otro nombre en la configuracion y no "localhost", debemos seguir estos pasos. Yo deje el
+mismo nombre, es decir, como "localhost" y no tengo que seguir estos pasos. Vamos a decir, que no se llama "localhost" y se 
+llama "nodo1")
+5.- Desde la ventana 1, escribo --> ping nodo1 --> nos aparece lo sgte: "unknown host nodo1 --> Para activarlo
+    hacemos lo siguiente:
+
+6.- Desde la ventana 2, escribo --> ifconfig --> Y copio desde "enp0s3" --> inet 10.0.2.15 --> Copio el numero
+
+7.- Desde la ventana 2, escribo --> gedit /etc/hosts --> Se abre un block de notas --> escribo lo siguiente: 10.0.2.15 nodo1 
+    --> Guardo y cierro
+
+8.- Desde la ventana 1, escribo --> ping localhost              ---\  Nos aparece registros y no se detendrán. Para que se detengan     
+                                o   ping localhost.localdomain  ---/  debo presionar CTRL + (activar mayusculas) C
+
+9.- Luego, desde la ventana 1 --> [hadoop@localhost mapreduce] --> escribo: ls -l --> jar tf hadoop-mapreduce-examples-3.3.4.jar
+    Asi podemos ver los ejemplos que podemos utilizar	
+
+10.- Ahora, desde la ventana 1 --> [hadoop@localhost mapreduce] --> escribo: mkdir /tmp/entrada
+
+11.- Ahora, desde la ventana 1 --> [hadoop@localhost mapreduce] --> escribo: cp /opt/hadoop/etc/hadoop/*.xml /tmp/entrada
+     Copio los archivos .xml a la ruta "/tmp/entrada"     
+
+12.- Desde la ventana 1, verificamos --> ls /tmp/entrada/
+
+13.- Desde la ventana 1, escribo --> pwd --> /opt/hadoop/share/hadoop/mapreduce 
+
+14.- Desde la ventana 1, escribo --> hadoop jar hadoop-mapreduce-examples-3.3.4.jar grep /tmp/entrada /tmp/salida 'kms[a-z.]+'
+     (no hace falta crear la ruta /tmp/salida/ el propio comando lo hace)  
+
+15.- Desde la ventana 1 --> [hadoop@localhost mapreduce] --> escribo: cd /tmp/salida
+
+16.-  la ventana 1 --> [hadoop@localhost salida] --> escribo: ls -l
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURAR SSH
+==============
+
+Debemos configurar el componente SSH. SSH es la forma en la que las máquinas Linux pueden conectarse en modo seguro y
+lanzarse. Por ejemplo, si tenemos un Cluster de 3 nodos y un nodo maestro. Entonces, con comandos SSH (Secure Shell) es 
+la forma en la que el servidor maestro es capaz de mandarle comandos a los nodos del Cluster de manera segura, es decir,
+shell seguro, pues cada vez que nosotros realizamos alguna operación a nivel del clúster, lo que va a hacer el nodo maestro 
+es comunicarle esos comandos o esas órdenes a los otros nodos del clúster, que a su vez también deben poder hablar entre sí.
+
+Lo primero que tenemos que hacer es poner un comando que nos va a permitir generar las claves públicas y privadas.
+
+1.- Desde la ventana 1 --> [hadoop@localhost ~] --> escribo: ssh-key
+
+Hay un comando que se llama "ssh-keygen" que nos permite generar la clave pública y la clave privada de cada nodo, de 
+manera, que como pasa con otros entornos de este tipo, nosotros vamos a ir compartiendo la clave pública entre todos 
+los nodos para que todos los nodos se entiendan entre sí.
+
+2.- Desde la ventana 1 --> [hadoop@localhost ~] --> escribo: ssh-keygen --> Luego, pulsamos ENTER hasta que terminemos (no ingresamos nada)
+
+3.- Desde la ventana 1 --> [hadoop@localhost ~] --> escribo: cd /home/hadoop/.ssh 
+
+4.- Desde la ventana 1 --> [hadoop@localhost .ssh] --> escribo: ls -l
+
+Nos aparecen dos archivos: id_rsa (clav privada) y id_rsa.pub (clave pública)
+
+5.- Desde la ventana 1 --> [hadoop@localhost .ssh] --> escribo: cat id_rsa.pub
+
+Según vayamos creando máquinas adicionales (nodos adicionales), tendremos que pasar esta clave pública entre los nodos (cada uno
+tendrá su clave) para que los nodos se entiendan entre si.
+
+6.- Desde la ventana 1 --> [hadoop@localhost .ssh] --> escribo: cp id_rsa.pub authorized_keys
+
+7.- Desde la ventana 1 --> [hadoop@localhost .ssh] --> escribo: cat authorized_keys
+
+Lo que contedrá este archivo "authorized_keys", según vayamos, añadiendo nodos, es el resto de las claves públicas de todos los nodos.
+Es decir, si tenemos 80 nodos, pues tendremos las claves de los 80 nodos anexadas en este archivo.
+
+¿Pero por qué debemos crear este archivo si estamos trabajando con un nodo? Pues Hadoop aunque tengamos un nodo va a intentar ejecutar
+los comandos via SSH, incluso aunque sea en el "localhost", en el nodo en el que nos encontramos y por lo tanto es obligatorio hacerlo 
+de esa manera.
+
+¿Como lo probamos?
+
+8.- Desde la ventana 1 --> [hadoop@localhost .ssh] --> escribo: ssh localhost
+
+De esta manera lo que estamos intentando es conectarnos en modo remoto a nuestro nodo "localhost". ¿Nos estamos intentando conectar a nuestra
+máquina? Pues si, es la manera de probar que alguien de fuera se podria conectar con esta clave.
+
+9.- Desde la ventana 1 --> [hadoop@localhost .ssh] --> escribo: yes y luego exit
+
+-----------------------------------------------------------------------------------------------------------------------

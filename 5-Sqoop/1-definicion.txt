@@ -1,0 +1,12 @@
+SQOOP
+=====
+
+Nos permite conectarnos a una tabla de alguna base de datos estructurada del tipo SQL, por ejemplo,
+MySQL, Oracle u otra similar (una base de datos estructurada clásica), extraer esa tabla y luego
+escribir esa tabla como un archivo sobre HDFS en un directorio que tenga una tabla HIVE asociada.
+De esa manera, evitamos el paso intermedio (exportar a un Gateway y luego subir el archivo con el
+comando 'put'), directamente nos conectamos a la BBDD y el archivo lo escribimos en HDFS.
+
+Esto esta limitado solamente a Bases de datos estructuradas.
+
+Existen una serie de desventajas, sobre todo en tiempos de transferencia de red que tiene Sqoop.

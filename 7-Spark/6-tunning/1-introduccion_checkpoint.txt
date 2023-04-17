@@ -1,0 +1,27 @@
+CHECKPOINT
+==========
+
+Los desarrolladores al momento de trabajar en Spark, hacen lo siguiente, empiezan a crear
+muchos Dataframes para programar:
+
+                                        df1
+                                         df2
+                                          df3
+                                           df4
+                                            df5
+                                             df6
+                                              ...
+
+Algunos podrian optimizar su código y tal vez puedan hacer lo mismo utilizando solo dos 
+Dataframes. Por lo tanto, no van a utilizar mucha memoria RAM. Pero quizás otros, para
+una misma necesidad de negocio utilicen 20 Dataframes, no sabemos como desarrollará cada
+programador. ¿Qué es lo que se hace entonces? Hay una técnica de TUNNING muy especial
+llamada "CHECKPOINT" que nos dice, cada cierta cantidad de pasos vamos a bajar todos los
+Dataframes que no sean temporales al Disco duro para liberar memoria RAM y luego los
+volvemos a cargar a nuevos Dataframes, no vamos a cargar todos, si no, solo aquellos que
+necesitemos para poder seguir programando nuestra solución. Eso es lo que se conoce como
+"CHECKPOINT", cargar cierta cantidad de pasos, liberar RAM, bajar a Disco duro y continuar
+con el procesamiento. Esto no afecta a las lógicas de negocio. El uso de CHECKPOINT NO ES
+OPCIONAL.
+
+--------------------------------------------------------------------------------------------------

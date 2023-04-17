@@ -1,0 +1,144 @@
+ARQUITECTURA DE SERVICIOS
+=========================
+
+SERVICIOS DE HDFS
+=================
+
+Para el funcionamiento de HDFS:
+
+==> Para que un Servidor se 'comporte' como 'Gateway' debe tener instalado dos servicios:
+    - Gateway
+    - HttpFs
+
+==> Para que un Servidor se 'comporte' como 'Master' debe tener instalado el servicio:
+    - Namenode
+
+==> Para que un Servidor se 'comporte' como 'Slave' debe tener instalado el servicio:
+    - Datanode 
+
+
+       GATEWAY                 MASTER                              SLAVE
+ __________________      __________________      __________________      __________________
+|<<Gateway>>       |    |<<Master>>        |    |<<Slave>>         |    |<<Slave>>         |
+|                  |    |                  |    |                  |    |                  |
+|- Gateway         |    |- Namenode        |    |- Datanode        |    |- Datanode        |
+|- HttpFs          |    |                  |    |                  |    |                  | 
+|__________________|    |__________________|    |__________________|    |__________________|
+                                                 __________________      __________________
+El Gateway es el nodo que tiene instalado las   |<<Slave>>         |    |<<Slave>>         |
+shells desde donde podemos ejecutar nuestros    |                  |    |                  |
+código, es un cliente                           |- Datanode        |    |- Datanode        |
+                                                |                  |    |                  |
+                                                |__________________|    |__________________|
+                                                
+                                                
+DESCRIPCIÓN
+
+• Gateway: Nodo con la configuración de HDFS y acceso a las shells
+  -------
+• HttpFs: Permite enviar comandos HDFS por medio de un API REST
+  ------
+• Namenode: Almacena los metadatos (estructuras de carpetas, tamaño de bloques)
+  --------
+• Datanode: Almacena los datos subidos al clúster                                                
+  
+---------------------------------------------------------------------------------------------------------------- 
+
+SERVICIOS DE YARN y MAP REDUCE
+==============================
+
+Para el funcionamiento de YARN y MAP REDUCE:
+
+==> Para que un Servidor se 'comporte' como 'Gateway' debe tener instalado el servicios:
+    - Gateway
+
+==> Para que un Servidor se 'comporte' como 'Master' debe tener instalado el servicio:
+    - Resource Manager
+
+==> Para que un Servidor se 'comporte' como 'Slave' debe tener instalado este servicio:
+    - Node Manager 
+
+       GATEWAY                 MASTER                              SLAVE
+ __________________      __________________      __________________      __________________
+|<<Gateway>>       |    |<<Master>>        |    |<<Slave>>         |    |<<Slave>>         |
+|                  |    |                  |    |                  |    |                  |
+|- Gateway         |    |- Resource        |    |- Node Manager    |    |- Node Manager    |
+|                  |    |  Manager         |    |                  |    |                  | 
+|__________________|    |__________________|    |__________________|    |__________________|
+                                                 __________________      __________________
+                                                |<<Slave>>         |    |<<Slave>>         |
+                                                |                  |    |                  |
+                                                |- Node Manager    |    |- Node Manager    |
+                                                |                  |    |                  |
+                                                |__________________|    |__________________|
+
+
+DESCRIPCIÓN
+
+• Gateway: Nodo con la configuración de YARN y acceso a las shells
+  -------
+• Resource Manager: Decide sobre que nodos slaves separar los recursos
+  ----------------
+• Node Manager:  Ejecuta las decisiones tomadas por el Resource Manager y separa sobre el nodo los 
+  ------------   recursos solicitados.
+
+---------------------------------------------------------------------------------------------------------------- 
+
+ROLES DE LOS SERVIDORES
+=======================
+
+HAY SERVIDORES CON DISTINTOS ROLES (3 ROLES DIFERENTES EN EL CLUSTER):
+
+- GETWAY
+- MASTER
+- SLAVE
+                       1           2            3 
+                 ______________________________________
+                |            |            |            |
+                |   GETWAY   |   MASTER   |    SLAVE   | 
+                |____________|____________|____________|
+                |            |            |            |   
+                |            |            |            |   
+                |            |            |            |   
+                |            |            |            |   
+                |            |            |            |   
+                |____________|____________|____________|  
+
+
+GETWAY
+------
+
+Los nodos 'GETWAY' van a permitir a los usuarios ingresar al Cluster. Generalmente 
+hay dos o mas Getway, porque puede ser que uno de los Getway colapse, por tanto, 
+podemos conectarnos a otro Getway para acceder al Cluster. Pero los Getway solamente
+permiten a los usuarios 'CONECTARSE', ellos 'NO PROCESAN NADA'. 
+
+SLAVE
+------
+
+La potencia de procesamiento esta en los servidores de rol 'SLAVE'. Luego de que un
+usuario se conecte al servidor Getway, debemos comenzar a enviar ejecuciones de 
+tareas a los nodos 'SLAVE'.
+
+MASTER
+------
+
+Pero estas ejecuciones de tareas no van 'directamente' a los nodos SLAVE. Si no, hay
+nodos intermedios, llamados nodos MAESTROS. En palabras faciles, un nodo MASTER recibe
+una peticion y delega el trabajo a los nodos SLAVE.
+
+ __________
+|          | 
+| Ejemplo  | 
+|__________|
+
+Vamos a hablar propiamente de HDFS. Vamos a tener un archivo en nuestra laptop y lo 
+primero que haremos es subir este archivo al 'nodo Getway'. Una vez que hemos subido 
+el archivo al 'Disco duro' que esta en el 'nodo Getway', vamos a guardar este archivo
+en el 'Gran Disco duro virtual' de los 'nodos SLAVE'. Recordemos que cada 'nodo esclavo'
+tiene su Disco duro, pero gracias a Hadoop lo vamos a ver como 'un gran unico Disco duro'.
+Pero esa peticion previa, va al 'nodo MAESTRO'. Pero en el caso de Hadoop, cuando se le
+pida guardar un archivo, lo que hace es 'CREAR 3 COPIAS DEL MISMO ARCHIVO' en servidores
+diferentes (en 3 servidores SLAVE)
+
+---------------------------------------------------------------------------------------------------------------- 

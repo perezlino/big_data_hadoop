@@ -1,0 +1,79 @@
+ESTÁNDARES PARA LA UTILIZACIÓN DE ARCHIVOS SEMI-ESTRUCTURADOS
+=============================================================
+
+Vamos a definir cuales son los estándares que tenemos que seguir al momento de trabajar
+con Dataframes que utilicen archivos JSON.
+
+Ya sabemos tenemos una mesa de trabajo llamada Data lake donde vamos a gobernar los flujos 
+de datos, tenemos la capa LANDING_TMP, LANDING, UNIVERSAL y SMART. Para la data estructurada 
+la recomendación es: 
+
+1.- Cargalo a Landing_tmp en textfile 
+2.- Luego conviértelo a AVRO
+3.- Y luego pásalo a PARQUET en Universal 
+
+¿Pero qué va a pasar con la data semiestructurada? ya no vamos a poder crear una tabla por 
+encima de ellos, ya que son archivos simplemente. Como todo esto está en un sistema de 
+archivos distribuidos basado en big data, para nuestro caso estudio HDFS, lo primero que 
+tenemos que hacer es: 
+
+1.- Subir este archivo semiestructurado. Ya no a una tabla, nosotros sabemos que aquí las 
+    tablas tienen directorios HDFS asociados y si subimos el archivo ahí, lo vamos a poder 
+    ver como una tabla. En el caso de la data semi-estructurada, ya no la podemos gobernar 
+    por medio de tablas, la vamos a tener que gobernar solo con los directorios y ya no lo 
+    podemos asociar tablas. 
+
+2.- También ya no va a ser necesario usar LANDING_TMP, si no, que directamente se suben a 
+    LANDING. Supongamos que estamos hablando de los archivos de “transacciones_complejas.json”, 
+    en el día uno nos dejan un archivo, en el día 2 nos dejarán otro archivo, en el día 3 nos 
+    dejarán otro archivo y sobre un directorio estamos acumulando todos los archivos relacionados 
+    a nuestra entidad, en este caso en formato JSON. 
+
+3.- Otro punto importante es que, y ¿qué pasa si quiero aplicar técnicas de particionamiento? 
+    las podemos seguir aplicando pero de manera manual, por ejemplo, vamos a crear una partición 
+    para el día uno, pues manualmente tendríamos que crear un directorio y subir el archivo ahí 
+    o para el día 2 o para el día 3. Podemos seguir aplicando técnicas de particionamiento, pero 
+    ya son manuales, ya no como en HIVE que era dinámico. 
+
+4.- Y el último punto es que nosotros lo que hemos hecho es leer un archivo, pero Spark también 
+    puede leer directorios completos, por ejemplo, nosotros en lugar de indicarle la ruta de un 
+    archivo, le podemos indicar un directorio donde vayamos acumulando varios archivos, indicarle 
+    una ruta HDFS a Spark y Spark va a cargar todos los archivos que hayan sobre esa ruta HDFS. 
+
+Ese es el primer punto de encuadre para gobernar esos datos, su captura. Ahora viene la segunda 
+parte, una vez que hemos capturado los datos, obviamente está en JSON o está en estructurado, esa 
+data puede estar sucia, hay que limpiarla. Pero no solamente se limpia, cuando estás en la capa 
+Universal para data semi-estructurada, también tienes que estructurarla. ¿Qué significa eso? 
+recordemos que las zonas del LANDING_TMP y LANDING son las zonas que se conocen como las zonas de 
+flexibilidad, porque allí pueden, gracias a eso en nuestro Data Lake puede aguantar cualquier cosa, 
+si de un día para otro cambia la data no pasa nada, estamos muy flexibles, tenemos AVRO para 
+estructurado y como estamos sobre el sistema de archivos distribuidos podemos guardar JSON, XML o 
+lo que queramos, tenemos mucha flexibilidad. Pero en UNIVERSAL ya tenemos que tener un mayor control, 
+en el caso de la data estructurada ese control se traducía en limpiar la data y seleccionar solamente 
+los campos que en nuestros procesos van a utilizar. Ya sabemos que el rol de definir qué tablas se 
+necesitan en UNIVERSAL recae en un modelador. Misma historia con la data semi-estructurada, nosotros 
+vamos a tener la flexibilidad de poder capturar fuentes de datos no-estructurado, pero eso no implica 
+que esa data en crudo, tal cual vino en la fuente, vamos a usarla para hacer la explotación de los 
+datos, hay que modelarla. ¿Qué significa modelar desde el punto de vista semiestructurada? significa 
+que vamos a crear procesos, que van a tomar los datos y van a crear diferentes vistas estructuradas 
+para un mismo conjunto de datos semiestructurados. Esto ya lo va a tener que definir un modelador que 
+conoce del negocio, por ejemplo, hemos visto que en el archivo json está embebido los datos de persona, 
+empresa y transacción, están embebidos en un mismo registro json, entonces, el modelador podría 
+decir: “…bien ya tenemos la data, está en una semi-estructura, pero no importa el Data Lake lo soporta…”, 
+pero esa data no está lista para ser consumida, porque está muy desordenada, así que vamos a ordenarla, 
+vamos a separarla en 3 tablas diferentes, en la tabla persona, en una tabla empresa y en una tabla 
+transacción y sobre eso ya se puede hacer gobierno de datos, porque ya tenemos bien definido qué es lo 
+que se va a usar. Y ese es el otro punto importante, en nuestra capa UNIVERSAL tenemos que estructurar 
+esa data semi-estructurada por 2 razones: 
+
+1.-  Para que pueda gobernarse
+2.-  Para que pueda explotarse fácilmente desde nuestras soluciones en SMART.
+
+A qué también podemos ver ya cómo se traduce esta regla de que hay que hacer un salto en el nivel de 
+estructura, si la data es no-estructurada hay que tratar de llevarla a semi-estructurada y si es 
+semi-estructurada hay que tratarla de llevar a estructurada. Justamente estamos siguiendo esta regla aquí. 
+Inicialmente es data semi-estructurada y hay que modelarla a estructurada para que pueda explotarse. Esas 
+son las 3 reglas que tenemos que seguir al momento de trabajar con semi-estructuras. Podemos capturarla 
+directamente y podemos aplicarle las reglas que se han explicado en la capa LANDING, podemos crear pistas 
+diferentes estructuradas para que sean fáciles de gobernar y por último los procesos en SMART ya van a 
+poder utilizar esos datos limpios y estructurados y gobernados, para poder hacer sus soluciones de siempre.

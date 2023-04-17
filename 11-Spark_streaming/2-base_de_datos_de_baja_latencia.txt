@@ -1,0 +1,623 @@
+BASE DE DATOS DE BAJA LATENCIA
+==============================
+
+Ahora vamos a enriquecer más el registro y le vamos a agregar 2 campos: nombre de la empresa en donde se realizó 
+la transacción y nombre de la persona que realizó la transacción. Para eso necesitamos tener cargados los datos 
+en Hbase, así que, vamos a entrar a Hbase desde consola:
+
+                                                hbase shell
+
+Vamos a crear un Namespace llamado “PROYECTO_4” y dentro de este Namespace voy a crear una tabla llamada PERSONA 
+con una familia de columnas que se llama DATOS y vamos a crear una tabla llamada EMPRESA también con una familia 
+de columnas que también se llama DATOS. Ahora, desde Hive vamos a crear una base de datos, por cierto las bases 
+de datos en Hive también se les llama SCHEMA, también llamada “PROYECTO_4” al igual que el Namespace que cree en 
+Hbase, y vamos a crear una tabla en esta base de datos llamada PERSONA que va a estar conectada a la tabla HBase 
+PERSONA. Misma historia para la tabla EMPRESA. Ahora vamos a poblar los datos, ¿cómo se convertían formatos de 
+datos en Hive? eso es muy fácil, hacemos un INSERT INTO PROYECTO_4.PERSONA que está conectada con Hbase, ¿qué le 
+vamos a insertar? todos estos datos desde la tabla UNIVERSAL.PERSONA. Cargamos, ¿qué es lo que se va a dar cuenta 
+Hive? que la tabla UNIVERSAL.PERSONA está en ‘parquet’ y que la tabla PROYECTO_4.PERSONA está en formato ¿eichfile? 
+De baja latencia y va a cargar la conversión del parquet a ¿eichfile?. En pocas palabras hemos poblado nuestra 
+tabla PROYECTO_4.PERSONA con datos de la tabla UNIVERSAL.PERSONA pero ahora en Baja latencia, eso es lo que se 
+llama PERSISTENCIA POLIGLOTA. En la tabla UNIVERSAL.PERSONA tenemos los datos en parquet y la tabla 
+PROYECTO_4.PERSONA en Smart está nuestra tabla pero en formato ¿eichfile? para Baja latencia. Si queremos procesar 
+en batch deberíamos apuntar a la tabla UNIVERSAL.PERSONA, si queremos consultar en Baja latencia tendríamos que 
+consultar a la tabla PROYECTO_4.PERSONA. ¿Qué significa esto de la PERSISTENCIA POLIGLOTA? tener la data duplicada 
+en 2 gestores de base de datos diferentes que cumplen objetivos diferentes. En la tabla PROYECTO_4.PERSONA tenemos 
+listo para consultas de Baja latencia. Ahora, uno podría decir y ¿por qué mejor no coloco todas las resultantes de 
+mis procesamientos en tablas con conexión a Hbase, para que pueda procesarlas desde Hive y pueda tener baja latencia? 
+eso es porque ¿eichfile? Es un formato muy, pero muy lento para hacer procesamiento, parquet es hasta 200, entre 200 
+a 300 veces más rápido, si lanzamos un COUNT en la tabla UNIVERSAL.PERSONA y se demora 1 minuto, probablemente el 
+COUNT en la tabla PROYECTO_4.PERSONA se va a demorar entre 200 a 300 minutos, porque esta tabla no está orientada a 
+ser procesado, está orientada a resolver consultas en función del ROW KEY. Persistencia políglota, misma data en 
+2 bases de datos diferentes que cumplen objetivos diferentes. Misma historia con la tabla EMPRESA. Vamos a mover los 
+datos desde la tabla UNIVERSAL.EMPRESA hasta PROYECTO_4.EMPRESA, para que estén en Baja latencia.
+
+
+Regrasamos al codigo del Consumer
+---------------------------------
+
+Regresamos al código de nuestro Consumer y en la función “enrichmentData()” vamos a hacer algunos pasos adicionales. 
+Vamos a utilizar una librería que nos va a permitir conectarnos a HBase de manera muy fácil, esta librería se llama 
+“happybase”. La importamos y ahora vamos a usarla. Vamos a establecer desde código una conexión a HBase y le digo: 
+“…voy a crear una conexión por medio de mi librería “happybase” hacia HBase y voy a utilizar para eso la función 
+“Connection” la cual va a recibir como parámetro uno de los nodos masters de en donde está instalado Hbase, uno de los 
+nodos maestros, yo lo tengo instalado en este mismo servidor en donde está Jupyter, así que por eso le estoy poniendo 
+“localhost”, por supuesto si estuviera en otra IP tendría que poner esa IP, pero yo tengo un HBase master instalado en 
+el mismo servidor donde está instalado Jupyter. Con eso he creado una conexión.
+
+                     _______________________________________________________________________
+                    |                                                                       |
+                    |   import json                                                         |
+                    |   import datetime                                                     |  
+                    |   from pyspark import SparkContext                                    |  
+                    |   from pyspark.streaming import StreamingContext                      |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                      |
+                    |   import happybase      <-----                                        |   
+                    |                                                                       |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --         |  
+                    |                                                                       |  
+                    |   def formatData(register):                                           | 
+                    |                                                                       |      
+                    |       registerValue = register[1]                                     |  
+                    |       registerFormatted = json.loads(registerValue)                   |
+                    |                                                                       |  
+                    |       return registerFormatted                                        |    
+                    |                                                                       |
+                    |                                                                       |    
+                    |   -- Realiza el proceso de enriquecimiento --                         |  
+                    |                                                                       |  
+                    |   def enrichementData(registerFormatted):                             |
+                    |                                                                       |
+                    |	    fechaHora = datetime.datetime.now()                             |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())  |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())   |
+                    |                                                                       |
+                    |       connection = happybase.Connection("localhost")   <-----         |
+                    |                                                                       |        
+                    |       return registerFormatted                                        |
+                    |_______________________________________________________________________|
+
+
+Ahora vamos a utilizar esta conexión para leer datos, vamos a leer primero el nombre de la empresa y le digo: 
+“…quiero extraer un registro desde la tabla empresa, para eso voy a utilizar la conexión de Hbase  y quiero conectarme 
+a la tabla dentro de tal Namespace llamada EMPRESA y quiero obtener el registro cuyo ID es y acá voy a poner el valor 
+de ese ID…”. En el registro que estamos recibiendo desde Kafka, ya tenemos el campo que se llamaba ID_EMPRESA. Entonces 
+le decimos: del registro quiero consultar en función del valor que tenga el campo ID_EMPRESA. 
+
+     ___________________________________________________________________________________________________________
+    |                                                                                                           |
+    |   import json                                                                                             |
+    |   import datetime                                                                                         |  
+    |   from pyspark import SparkContext                                                                        |  
+    |   from pyspark.streaming import StreamingContext                                                          |  
+    |   from pyspark.streaming.kafka import KafkaUtils                                                          |
+    |   import happybase                                                                                        |   
+    |                                                                                                           |                          
+    |   -- Convierte los datos recibidos a un formato procesable --                                             |     
+    |                                                                                                           |  
+    |   def formatData(register):                                                                               | 
+    |                                                                                                           |      
+    |       registerValue = register[1]                                                                         |  
+    |       registerFormatted = json.loads(registerValue)                                                       |
+    |                                                                                                           |  
+    |       return registerFormatted                                                                            |    
+    |                                                                                                           |
+    |                                                                                                           |    
+    |   -- Realiza el proceso de enriquecimiento --                                                             |  
+    |                                                                                                           |  
+    |   def enrichementData(registerFormatted):                                                                 |
+    |                                                                                                           |
+    |	    fechaHora = datetime.datetime.now()                                                                 |
+    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())                                      |
+    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())                                       |
+    |                                                                                                           |
+    |       connection = happybase.Connection("localhost")                                                      |
+    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).row(registerFormatted['ID_EMPRESA'])  | <-----
+    |                                                                                                           |        
+    |       return registerFormatted                                                                            |
+    |___________________________________________________________________________________________________________|
+
+
+Lo ideal sería que funcione con esto, aquí ya tenemos garantía de que esté el ID de la empresa, pero ¿cuál es el problema? 
+que las búsquedas en HBase se hacen a nivel binario. Cuando estamos trabajando en tiempo real van a ver que la conversión a 
+binario es lo que siempre se está haciendo, así que no le podemos enviar el ID de la empresa así como un string, hay que 
+convertirlo a binario. ¿Cómo se convierte a binario? primero hay que forzar a que este valor sea una cadena de caracteres, 
+porque el ID de la empresa en el JSON es un entero y los enteros no se pueden convertir a binario, solo cadena de caracteres, 
+por medio de la función “str()” convertimos esto a una cadena de caracteres. Ahora que aquí ya tenemos una cadena de 
+caracteres, a esa cadena le digo “.encode()” y así es cómo se convierte binario.
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())  <-----    | 
+                    |                                                                                  |        
+                    |       return registerFormatted                                                   |
+                    |__________________________________________________________________________________|
+
+
+Ahora sí le estamos enviando el ID de la empresa en binario, porque HBase solamente puede buscar en binario desde lenguajes 
+de programación, en la consola podíamos hacer un “get” aquí ya no, tiene que ser un binario. Con esto HBase buscará el 
+registro cuyo ID sea el que tenga el valor de ID_EMPRESA y la resultante la dejará en la variable “rowEmpresa”. Ya tenemos 
+el registro listo. De ese registro, nosotros solamente queremos extraer el nombre de la empresa, así que del registro que 
+nos va a interesar, lo siguiente: solamente queremos extraer ese registro de la familia de columnas DATOS, queremos extraer 
+la columna NOMBRE. 
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())            |
+                    |       nombreEmpresa = rowEmpresa["DATOS:NOMBRE"]  <-----                         | 
+                    |                                                                                  |        
+                    |       return registerFormatted                                                   |
+                    |__________________________________________________________________________________|
+
+
+Y misma historia, con esto sería suficiente pero así como las consultas se hacen en binario, lo que te devuelve HBase 
+también te lo está devolviendo en binario, este “rowEmpresa” tiene los datos en binario. Así que la navegación de los 
+campos también la tenemos que hacer en binario ¿que implica esto? a este string que hemos escrito, queremos el campo 
+nombre de la familia de columna DATOS pero hay que enviárselo en binario, es lo único que HBase entiende, 
+“punto” “enconde()”. Ahora sí entiende qué campo queremos. Busca el campo y el valor de nombre de ese registro te lo 
+devuelve en la variable “nombreEmpresa”, pero misma historia, te lo devuelve en binario, hay que convertirlo en cadena de 
+caracteres nuevamente. Entonces, le agregamos “decode()” y al momento de hacer la conversión de binario a cadena de 
+caracteres, tenemos que indicarle qué formato de cadena de caracteres queremos usar vamos a usar un UTF-8 para que si es 
+que existe una tilde por ahí pueda ser soportada. 
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())            |
+                    |       nombreEmpresa = rowEmpresa["DATOS:NOMBRE".encode()].decode("utf-8")        | <-----                         | 
+                    |                                                                                  |        
+                    |       return registerFormatted                                                   |
+                    |__________________________________________________________________________________|
+
+
+Para que no nos compliquemos, al final esto es un snippet de código, por ejemplo, vamos a hacerlo ahora con el “rowPersona” 
+como ya tengo mi snipet de código voy a modificar algunos valores dentro de la línea de código. También podemos crear las 
+variables “nombrePersona” y “edadPersona” derivadas desde “RowPersona”.
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())            |
+                    |       nombreEmpresa = rowEmpresa["DATOS:NOMBRE".encode()].decode("utf-8")        |                          | 
+                    |                                                                                  |
+                    |       rowPersona = connection.table("MAIN_SMART_PROYECTO_4:PERSONA).\            | <-----
+                    |                    row(str(registerFormatted['ID_PERSONA']).encode())            | <-----
+                    |       nombrePersona = rowPersona["DATOS:NOMBRE".encode()].decode("utf-8")        | <----- 
+                    |       edadPersona = rowPersona["DATOS:EDAD".encode()].decode("utf-8")            | <-----                   
+                    |                                                                                  |        
+                    |       return registerFormatted                                                   |
+                    |__________________________________________________________________________________|
+
+
+Vamos a crear el campo NOMBRE_PERSONA en nuestro registro, cuyo valor va a ser igual obviamente esta variable que hemos 
+leído, la variable “nombrePersona”. De la misma forma, vamos a crear NOMBRE_EMPRESA y EDAD_PERSONA.
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())            |
+                    |       nombreEmpresa = rowEmpresa["DATOS:NOMBRE".encode()].decode("utf-8")        |                          | 
+                    |                                                                                  |
+                    |       rowPersona = connection.table("MAIN_SMART_PROYECTO_4:PERSONA).\            | 
+                    |                    row(str(registerFormatted['ID_PERSONA']).encode())            | 
+                    |       nombrePersona = rowPersona["DATOS:NOMBRE".encode()].decode("utf-8")        |  
+                    |       edadPersona = rowPersona["DATOS:EDAD".encode()].decode("utf-8")            |                    
+                    |                                                                                  |        
+                    |       registerFormatted['NOMBRE_PERSONA'] = nombrePersona                        | <-----
+                    |       registerFormatted['NOMBRE_EMPRESA'] = nombreEmpresa                        | <-----
+                    |       registerFormatted['EDAD_PERSONA'] = edadPersona                            | <-----                                       
+                    |                                                                                  | 
+                    |       return registerFormatted                                                   |
+                    |__________________________________________________________________________________|
+
+
+Volvemos a iniciar el proceso con los cambios que realizamos:
+
+1.- Detengo el Producer en Jupyter y lo vuelvo a ejecutar
+2.- Detengo el Consumer en Jupyter (detenemos el proceso que se está ejecutando) y 
+    lo reiniciamos (Kernel --> Restart & Clear Output)
+
+
+Finalmente, para acabar todo este 'end to end' nos está faltando el último paso, ya hemos leído desde tablas y tenemos un 
+registro enriquecido, ahora vamos a guardar esta resultante en una tabla Hbase. Los registros enriquecidos los vamos a ir 
+guardando en tiempo real y vamos a poner notar una tabla Hive encima para que desde un graficador en tiempo real se vaya 
+actualizando, ese sería el último paso. Para eso volvemos a HBase y vamos a crear una tabla, esta tabla se va a llamar 
+TRANSACCION_ENRIQUECIDA, en donde en la familia de columnas PERSONA vamos a poner el ID de la persona que hizo la 
+transacción y el nombre de la persona. En EMPRESA vamos a colocar el ID de la empresa donde se hizo la transacción y el 
+nombre de la empresa que hemos leído desde la base de datos y finalmente en TRANSACCION vamos a colocar la fecha, hora y 
+monto de transacción. Creo mi tabla. 
+
+            create 'MAIN_SMART_PROYECTO_4:TRANSACCION_ENRIQUECIDA', 'PERSONA', 'EMPRESA', 'TRANSACCION'
+
+
+Detenemos el proceso del Consumer y vamos a agregar un poco más de lógica. Aquí vamos a borrar esta variable “edadPersona” 
+y el campo EDAD_PERSONA. Bien, último paso para guardar la data, le voy a decir: “…de la conexión HBase que tengo, quiero 
+conectarme a la tabla MAIN_SMART_PROYECTO_4:TRANSACCION_ENRIQUECIDA y además, quiero realizar una operación de escritura, 
+agregamos la función “put()”. 
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())            |
+                    |       nombreEmpresa = rowEmpresa["DATOS:NOMBRE".encode()].decode("utf-8")        |                          | 
+                    |                                                                                  |
+                    |       rowPersona = connection.table("MAIN_SMART_PROYECTO_4:PERSONA).\            | 
+                    |                    row(str(registerFormatted['ID_PERSONA']).encode())            | 
+                    |       nombrePersona = rowPersona["DATOS:NOMBRE".encode()].decode("utf-8")        |                    
+                    |                                                                                  |        
+                    |       registerFormatted['NOMBRE_PERSONA'] = nombrePersona                        | 
+                    |       registerFormatted['NOMBRE_EMPRESA'] = nombreEmpresa                        |                                       
+                    |                                                                                  | 
+                    |       connection.table('MAIN_SMART_PROYECTO_4:TRANSACCION_ENRIQUECIDA').put()    | <----- 
+                    |                                                                                  | 
+                    |       return registerFormatted                                                   |
+                    |__________________________________________________________________________________|
+
+
+Es te “put()” va a recibir 2 parámetros, número uno, recordemos que tenemos que tener un ROW KEY, en el caso de la persona 
+era su ID, el caso de la empresa también tenía su ID, pero en el caso de transacción enriquecida no tenemos un ID, en la 
+transacción enloquecida tenemos el ID de la persona y de la empresa, nombre de persona y nombre de empresa, fecha, monto y
+hora de transacción, ¿qué campo podría ser el ID de todos esos? ¿qué campo podría ser el ROW KEY para la tabla transacción 
+enriquecida? ¿podría ser acaso el ID_PERSONA? no, porque si yo lo guardo en función del ID_PERSONA, si por ahí la persona 
+de ID = 51 vuelve a hacer una transacción va a remplazar este registro, recordamos que el ROW KEY tiene que ser único, asi 
+que ID_PERSONA no es un buen candidato, tampoco lo es ID_EMPRESA, en realidad ninguno de estos campos es un buen candidato. 
+Lo que vamos a hacer es escribir una función que nos cree una ROW KEY virtual en función de los campos y en la gran mayoría 
+de casos, esa ROW KEY virtual va a tener concatenada la fecha y hora de captura del registro, por ejemplo, podría formar una 
+ROW KEY de la siguiente manera: el ID de la persona + el ID de la empresa, si utilizamos solo estos dos el problema sería y 
+¿qué pasa si una persona hace una alguna transacción en esa misma empresa? no es un ROW KEY único, entonces le vamos a agregar 
+también la fecha de la transacción y la hora de la transacción:, este es un mejor ROW KEY, nuestra hora de transacción está 
+incluso a nivel de micro-segundos, 
+
+Ejemplo de una transacción:
+
+----------------------------------------------------------------
+Time: 2023-03-24 02:31:20
+----------------------------------------------------------------
+{u'ID_PERSONA':90, 'NOMBRE_PERSONA':u'Damon', u'MONTO':2660, u'ID_EMPRESA':2, 'NOMBRE_EMPRESA':u'Apple', 'HORA_TRANSACCION':'02:31:20.170450', 'FECHA_TRANSACCION':'2022-03-24'}
+{...}
+{...}
+{...}
+{...}                    (10 registros cada 5 segundos)
+{...}
+{...}
+{...}
+{...}
+{...}
+
+----------------------------------------------------------------
+Time: 2023-03-24 02:31:25
+----------------------------------------------------------------
+
+.......
+
+¿con una concatenación de este tipo para nuestra llave que implicaría? que para que un registro de transacción se repita la 
+misma persona en la misma empresa a la misma fecha y a la misma hora a nivel de microsegundo, tendría que haber hecho 2 
+transacciones de manera simultánea, no sé pues, abre 2 páginas web de compras una de Amazon y  una de ebay y le da clic a 
+comprar y al mismo tiempo a nivel de microsegundos la transacción se realiza, obviamente eso es prácticamente imposible. Así 
+que la concatenación de estos cuatro campos nos garantiza unicidad de transacción y eso es lo que se llama crear una ROW KEY 
+virtual. En la gran mayoría de casos se resuelve esta manera concatenando algunos campos junto con la fecha y hora del 
+registro que estamos procesando. Bien, ya tenemos la estrategia, hay que implementarla en una función. 
+
+Vamos a crear entonces otra función, y a esta función le voy a poner de nombre “getHBaseRowKey()”, vamos a obtener la ROW KEY 
+en función del registro que estemos procesando. Y, ¿cómo lo vamos a obtener? vamos a retornar la concatenación de los 
+siguientes campos: el registro, quiero concatenar el campo ID_PERSONA concatenado con el registro ID_EMPRESA concatenado con 
+el registro FECHA_TRANSACCION y finalmente quiero concatenar el registro HORA_TRANSACCION. Con eso ya tenemos una función que 
+nos crea una ROW KEY virtual. ¿Cuál es el problema aquí? en el caso de python solamente se pueden concatenar cadena de 
+caracteres y el ID_PERSONA es un entero, hay que forzar a que sea un string, ya sabemos cómo, convertimos esto a un string y 
+nos aseguramos que todo sea un string, forzamos a que sea string porque quién sabe lo que venga ahí, para que no nos 
+compliquemos todos los campos los forzamos a que se convierta en siempre string. 
+
+Y un último paso así como las consultas se hacen en binario, el ROW KEY también lo tenemos que colocar en binario. Todo este 
+return, toda esta concatenación la voy a poner entre paréntesis y al resultado de esa concatenación le voy a decir 
+“.encode()”, conviertelo a binario, porque HBase solo entiende binario. Ya tenemos la función que dado el registro crea su 
+clave, su ROW KEY virtual y la convierte a binario.
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())            |
+                    |       nombreEmpresa = rowEmpresa["DATOS:NOMBRE".encode()].decode("utf-8")        |                          | 
+                    |                                                                                  |
+                    |       rowPersona = connection.table("MAIN_SMART_PROYECTO_4:PERSONA).\            | 
+                    |                    row(str(registerFormatted['ID_PERSONA']).encode())            | 
+                    |       nombrePersona = rowPersona["DATOS:NOMBRE".encode()].decode("utf-8")        |                    
+                    |                                                                                  |        
+                    |       registerFormatted['NOMBRE_PERSONA'] = nombrePersona                        | 
+                    |       registerFormatted['NOMBRE_EMPRESA'] = nombreEmpresa                        |                                       
+                    |                                                                                  | 
+                    |       return registerFormatted                                                   |
+                    |                                                                                  | 
+                    |                                                                                  | 
+                    |   -- Obtiene la "key" para almacenar sobre HBASE --                              | 
+                    |                                                                                  | 
+                    |   def getHBaseRowKey(register):                                                  | <--------
+                    |                                                                                  | 
+                    |       return str(                                                                | 
+                    |           str(register['ID_PERSONA'])+'-'+                                       |     
+                    |           str(register['ID_EMPRESA'])+'-'+                                       | 
+                    |           str(register['FECHA_TRANSACCION'])+'-'+                                | 
+                    |           str(register['HORA_TRANSACCION'])                                      | 
+                    |           ).encode()                                                             |     
+                    |__________________________________________________________________________________|
+                    
+                    
+Continuemos con el “put” que teníamos pendiente, vamos a conectarnos a la tabla y le vamos a hacer un put(), el ‘put’ va a 
+requerir de 2 parámetros, el primero es la función que te crea el ROW KEY, y el segundo parámetro va a ser la información 
+que queremos guardar ¿Qué queremos guardar? para eso vamos a escribir otra función en donde vamos a mapear los datos que 
+queremos guardar y el nombre le vamos a poner “getHBaseRow” vamos a obtener el mapeo de los registros hacia Hbase. Tenemos 
+que mapear cada campo del registro que queremos guardar, tenemos que mapear cada campo del JSON a una familia de columnas y 
+columnas dentro la tabla Hbase. ¿Cómo hacemos esto? vamos a escribirlo por partes.  Dentro del ‘return’ escribimos lo 
+siguiente, en la tabla TRANSACCIÓN_ENRIQUECIDA (ahí estoy haciendo el put) en la familia de columnas PERSONA voy a crear una 
+columna llamada ID y le quiero colocar en esa columna del registro su campo ID_PERSONA. En el registro se llama ID_PERSONA 
+pero ese campo yo lo estoy mapeando a esta familia de columnas (PERSONA) a esta columna (ID). Siguiente mapeo, en la familia 
+de columnas PERSONA quiero crear un campo llamado NOMBRE y aquí le voy a colocar el NOMBRE_PERSONA, ahora vamos con la otra 
+familia de columnas en EMPRESA y hacemos lo mismo. Finalmente en la familia de columnas TRANSACCION en la columna FECHA voy a
+ colocar el campo FECHA_TRANSACCION, de igual manera lo hacemos para la columna HORA y MONTO. Ahí ya tenemos mapeada la data. 
+ Sería ideal que con eso funcionara, pero misma historia, esto se lo tenemos que pasar en binario. Vamos a convertir todo 
+ esto a binario. Utilizamos solo “encode()” para la familia de columnas:columna y para ‘register[Campo]’ no sabemos si dentro 
+ del campo hay un entero, un real, una cadena de caracteres, así que, ¿qué te dice el patrón en Python? hay que forzar a 
+ convertir esto en string y a un string ya lo podemos poner en binario, utilizando “.encode()”. Misma historia con el resto 
+ de campos.
+
+                     __________________________________________________________________________________
+                    |                                                                                  |
+                    |   import json                                                                    |
+                    |   import datetime                                                                |  
+                    |   from pyspark import SparkContext                                               |  
+                    |   from pyspark.streaming import StreamingContext                                 |  
+                    |   from pyspark.streaming.kafka import KafkaUtils                                 |
+                    |   import happybase                                                               |   
+                    |                                                                                  |                          
+                    |   -- Convierte los datos recibidos a un formato procesable --                    |     
+                    |                                                                                  |  
+                    |   def formatData(register):                                                      | 
+                    |                                                                                  |      
+                    |       registerValue = register[1]                                                |
+                    |       registerFormatted = json.loads(registerValue)                              |
+                    |                                                                                  |
+                    |       return registerFormatted                                                   |    
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Realiza el proceso de enriquecimiento --                                    |
+                    |                                                                                  |
+                    |   def enrichementData(registerFormatted):                                        |
+                    |                                                                                  |
+                    |	    fechaHora = datetime.datetime.now()                                        |
+                    |       registerFormatted['FECHA_TRANSACCION'] = str(fechaHora.date())             |
+                    |       registerFormatted['HORA_TRANSACCION'] = str(fechaHora.time())              |
+                    |                                                                                  |
+                    |       connection = happybase.Connection("localhost")                             |
+                    |       rowEmpresa = connection.table("MAIN_SMART_PROYECTO_4:EMPRESA).\            |
+                    |                    row(str(registerFormatted['ID_EMPRESA']).encode())            |
+                    |       nombreEmpresa = rowEmpresa["DATOS:NOMBRE".encode()].decode("utf-8")        |                          | 
+                    |                                                                                  |
+                    |       rowPersona = connection.table("MAIN_SMART_PROYECTO_4:PERSONA).\            | 
+                    |                    row(str(registerFormatted['ID_PERSONA']).encode())            | 
+                    |       nombrePersona = rowPersona["DATOS:NOMBRE".encode()].decode("utf-8")        |                    
+                    |                                                                                  |        
+                    |       registerFormatted['NOMBRE_PERSONA'] = nombrePersona                        | 
+                    |       registerFormatted['NOMBRE_EMPRESA'] = nombreEmpresa                        |
+                    |       connection.table('MAIN_SMART_PROYECTO_4:TRANSACCION_ENRIQUECIDA').put(     | <------                                                        
+                    |           getHBaseRowKey(registerFormatted)                                      |                                                | 
+                    |           getHBaseRow(registerFormatted)                                         | 
+                    |       )                                                                          | 
+                    |                                                                                  | 
+                    |       return registerFormatted                                                   |
+                    |                                                                                  | 
+                    |                                                                                  | 
+                    |   -- Obtiene la "key" para almacenar sobre HBASE --                              | 
+                    |                                                                                  | 
+                    |   def getHBaseRowKey(register):                                                  | 
+                    |                                                                                  | 
+                    |       return (                                                                   | 
+                    |           str(register['ID_PERSONA'])+'-'+                                       |     
+                    |           str(register['ID_EMPRESA'])+'-'+                                       | 
+                    |           str(register['FECHA_TRANSACCION'])+'-'+                                | 
+                    |           str(register['HORA_TRANSACCION'])                                      | 
+                    |           ).encode()                                                             |
+                    |                                                                                  |
+                    |                                                                                  |
+                    |   -- Obtiene el registro con el formato de almacenamiento de HBASE --            | 
+                    |                                                                                  | 
+                    |   def getHBaseRow(register):                                                     | <--------
+                    |                                                                                  | 
+                    |   return {                                                                       |     
+                    |       "PERSONA:ID".encode(): str(register['ID_PERSONA']).encode(),               | 
+                    |       "PERSONA:NOMBRE".encode(): str(register['NOMBRE_PERSONA']).encode(),       | 
+                    |       "EMPRESA:ID".encode(): str(register['ID_EMPRESA']).encode(),               | 
+                    |       "EMPRESA:NOMBRE".encode(): str(register['NOMBRE_EMPRESA']).encode(),       | 
+                    |       "TRANSACCION:FECHA".encode(): str(register['FECHA_TRANSACCION']).encode(), | 
+                    |       "TRANSACCION:HORA".encode(): str(register['HORA_TRANSACCION']).encode(),   | 
+                    |       "TRANSACCION:MONTO".encode(): str(register['MONTO']).encode()              | 
+                    |   }                                                                              | 
+                    |                                                                                  |  
+                    |__________________________________________________________________________________|
+
+
+Por último a esta tabla que se está poblando con datos en tiempo real, nos vamos a ir a Hive y le vamos a crear una fachada 
+por encima. Vamos a crear la tabla externa MAIN_SMART_PROYECTO_4.TRANSACCION_ENRIQUECIDA, que va a estar conectada a 
+TRANSACCION_ENRIQUECIDA de HBase y va a mapear todos los campos, los de personas, los de empresa y los de transacción. 

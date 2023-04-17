@@ -1,0 +1,682 @@
+SIZING
+======
+
+==> Identificar cuántos nodos se necesitan para cada rol y qué 
+    características hardware deben de tener.
+
+Recordar que nos hicimos dos preguntas:
+
+1.- ¿Cuantos nodos 'Gateway, ' Master', 'Metadata' y 'Slave' necesitamos para nuestro Cluster?
+2.- ¿Cuales seran las caracteristicas Hardware de cada nodo según su rol?
+
+La primera pregunta es la cantidad de nodos por servidor. ¿Cuál es la buena noticia? ya hay un estándar 
+para los nodos Gateway, Master y Metadata, pero lamentablemente no existe un estándar para los nodos 
+esclavos, porque obviamente dependiendo de que la Empresa puede que necesites más potencia, como puedes 
+que necesites menos potencia computacional.
+
+La otra pregunta es acerca de la cantidad de recursos computacionales de cada uno de los servidores. 
+Básicamente tenemos que responder RAM, CPU y DISCO DURO (para nodos Gateway, Master, Metadata y Slave). 
+La buena noticia es que también ya existe un estándar el cuál va a ser tu punto de partida para poder hacer 
+tu sizing. Por lo tanto, ya tenemos resuelto la gran mayoría de del sizing de nuestro Cluster. El único 
+trabajo que vamos a tener que pensar a detalle es cuántos nodos necesita el servidor Slave. 
+
+Antes de revisar cuáles son los estándares que mencionamos, vamos a hablar de algunas consideraciones 
+hardware que tenemos que conocer para poder entender estos estándares. 
+
+---------------------------------------------------------------------------------------------------------------- 
+ ______________________________________
+|                                      |
+|   Consideraciones hardware           |
+|   de los recursos computacionales    |
+|______________________________________|
+
+¿Qué entendemos por Recurso computacional?
+------------------------------------------
+
+Es todo aquel elemento de un servidor que te va a permitir transportar datos, almacenarlos y procesarlos. 
+Ese es un recurso computacional en un server. 
+
+¿Qué tenemos para poder hacer todo eso en un servidor?:
+
+Para transportar los datos: tenemos la interfaz de red. Por ejemplo, tenemos un servidor 1 del clúster y 
+--------------------------- un servidor 2 del clúster y queremos mover datos del servidor 1 al servidor 2. 
+                            Desde el punto de vista de infraestructura, eso significa que se va a mover por 
+                            medio de un cable UTP.
+
+El almacenamiento: el almacenamiento puede ser de 2 tipos, "memoria secundaria" y "memoria principal". 
+------------------ La memoria secundaria es el disco duro (el almacenamiento permanente) y la memoria 
+                   principal es la memoria en donde se realizan los procesamientos (la RAM). Ya sabemos que 
+                   los archivos viven en el disco duro, pero al momento de procesarlos se suben en la memoria 
+                   RAM. Disco duro es memoria secundaria y memoria RAM es la memoria principal, ahí es donde 
+                   tú puedes almacenar los datos 
+
+Procesar: y finalmente hay que procesar la información. Todos los scripts que nosotros implementemos, van a 
+--------- ejecutarse en las CPU. Ahora, ¿qué tipos de CPU existen? Existen las CPU genéricas, las que tenemos 
+          todos en nuestras laptops. Estas te permiten hacer cálculos genéricos. Existen CPUs especializadas, 
+          por ejemplo la GPU es una CPU especializada para hacer cálculos matriciales. Para ponerlo en términos 
+          simples, se comenta que la GPU va a reemplazar a la CPU porque es más rápida, error la GPU solamente 
+          es más rápida que la CPU cuando implementes algoritmos que hagan cálculos matriciales, por ejemplo, 
+          los del tipo de DEEP LEARNING. Pero si tu algoritmo no hace cálculos matriciales, no tiene sentido 
+          que ejecutes sobre una GPU, ahí te va a convenir una CPU. La GPU es mucho más cara que la CPU, así 
+          que hay que saber cuándo optimizar su uso para no estar ejecutando todo en GPU. De hecho, actualmente 
+          existe un nuevo tipo de CPU llamada NPU,  que es una CPU orientada a procesamiento del lenguaje 
+          natural, es otra especialización. Obviamente la NPU no va a reemplazar a la CPU ni a la GPU, cada 
+          tipo de CPU cumple objetivos diferentes, eso ténganlo en mente. Para el estándar de Big Data, en la 
+          parte de procesamiento de datos existen estándares para interfaces de red, para disco duro, para 
+          memoria RAM y para CPU, pero actualmente no existe un estándar que tan potente tiene que ser la GPU 
+          o la NPU dentro de nuestro Cluster, eso aún no existe. De hecho, uno de los retos actuales que hay en 
+          el mundo del Big data es integrar los algoritmos de Deep learning para que tengan todas las ventajas 
+          de Big data, se puede hacer Deep Learning, lo difícil es hacer Deep Learning en un framework escalable 
+          sobre Big data.                    
+
+
+¿Como estan relacionados todos estos recursos computacionales?
+--------------------------------------------------------------
+
+Los datos que queremos procesar entran por la interfaz de red, por un cable UTP casi siempre. Si quieres 
+almacenarlos de manera permanente, van al disco duro. Luego al momento de que un script los procese, primero 
+se cargan a la memoria RAM, ya sabemos que hay que tunear todo esto y luego tu proceso se ejecuta en la CPU 
+y va tomando los registros que hay en memoria RAM para procesar. Así es como funciona el End to End clásico. 
+En un Cluster de Big data funciona de la misma manera, solamente que ya sabemos que es un conjunto de 
+servidores, pero en esencia todos los servidores hacen esto. Nosotros solamente indicamos el nivel de 
+paralización y ya verá el propio clúster en qué servidores ejecuta tu programa y en cada servidor se realiza 
+esta ejecución. 
+
+Clásicamente en entornos de Big Data el estándar de servidores es tener 100 TB de disco duro, 256 GB de RAM y 
+40 núcleos de CPU por servidor. Obviamente este estándar va a variar dependiendo de si el Server es Gateway, 
+Master, Metadata o un Slave, eso lo vamos a ver en unos momentos.
+
+
+¿Qué consideraciones tenemos que tener en cuenta para cada uno de estos recursos computacionales? 
+-------------------------------------------------------------------------------------------------
+
+⬤ Respecto a la CPU: 
+
+Mientras más CPU tengamos más procesos en paralelo vamos a poder ejecutar. ¿Cómo se entiende esto? por ejemplo, 
+tenemos cuatro CPUs y tenemos cuatro procesos, si nuestro servidor tiene cuatro CPUs podemos ejecutar en paralelo 
+cuatro procesos, una en cada CPU. Pero si nuestro servidor tan solo tuviese una CPU y nosotros tuviésemos cuatro 
+procesos, todos estarían ocupando el tiempo de esta CPU. ¿Qué es lo que haría la CPU para procesar cuatro procesos 
+de paralelo? tendría que intercalar las instrucciones de cada uno de estos procesos y ahí ya perdemos la paralelización. 
+Así que mientras más CPU tenga, más procesos en paralelo puedes ejecutar. 
+
+También, mientras más CPUs tengamos más paralelizable es nuestro proceso. ¿Esto que significa? recordar que para 
+paralelizar un proceso levantamos containers y cada container tienes CPUs. Si duplicamos el número de containers, lo 
+que estamos haciendo por debajo es duplicar el número de CPUs, así que mientras más CPUs tengas en tu clúster, el nivel 
+de paralelización de nuestro proceso va a poder crecer más. 
+
+
+⬤ Respecto a la RAM: 
+
+Mientras más RAM tengamos en el clúster, vamos a poder procesar archivos y tablas más pesadas. Recordemos que lo que 
+queremos procesar vive en Disco duro y para hacer el procesamiento hay que cargarlo en la memoria RAM. Si tenemos 16 GB 
+de RAM y tenemos un archivo que pesa 100 GB, eso no va a entrar aquí. Así que mientras más grande sea la memoria RAM del 
+Cluster, cada vez vas a poder procesar archivos más grandes. 
+
+Mientras más RAM tenga el Cluster, menos memoria virtual vamos a necesitar. ¿Qué es esto de la memoria virtual? Digamos, 
+por ejemplo, tenemos 10 GB de RAM en el servidor y queremos procesar un archivo de 25 GB. ¿Qué es lo que va a pasar? vamos 
+a poder cargar 10 GB del archivo que queremos procesar y van a haber 15 GB del archivo que no vamos a poder procesar. 
+¿Qué es lo que se puede hacer para evitar este problema? es un poquito más complejo, pero para entenderlo al menos en este 
+momento, lo que hacen los sistemas operativos es de Disco duro emular memoria RAM. Así que los 15 GB faltantes que no se 
+pudieron cargar en esta memoria RAM, se van a cargar aquí en el Disco duro y esta partición del Disco duro se le conoce como 
+la partición SWAP. Realmente es un intercambio de paginación, pero para no entrar en tantos detalles técnicos, básicamente 
+emula memoria RAM desde Disco duro, para que podamos procesar. Pero ya sabemos que el Disco duro es 100 veces más lento que 
+la memoria RAM, así que cuando la CPU pregunte por estos registros tu algoritmo va a ir 100 más lento. Así que mientras más 
+RAM tenga tu Cluster menos vas a depender de esta memoria virtual. 
+
+
+⬤ Respecto al Disco Duro:
+
+Mientras más capacidad de almacenamiento tengan nuestros Discos duros, vamos a poder guardar más archivos.
+
+Mientras más Discos duros tengamos en nuestro Cluster, más paralelizable va a ser nuestro proceso de escritura y lectura. 
+Recordar que se comentó que una cosa es tener un Disco duro de 5 TB de infraestructura para cada servidor y otra cosa 
+completamente diferente es tener 5 Discos duros de 1 TB. Cuando en HDFS le decimos: “…oye escribe en este archivo, al utilizar 
+un solo Disco duro se va a escribir de manera lineal, porque solo tenemos un cabezal de lectura y escritura, pero si tuvieramos 
+una configuración de infraestructura de 5 Discos duros, HDFS se da cuenta, parte el archivo en 5 y lo escribe en 5 Discos duros 
+diferentes de manera paralela y lo va a escribir más rápido. Eso es otro aspecto de infraestructura, no solamente es la capacidad 
+de Disco, sino, también el número de Discos. Siempre se va a preferir más Discos duros. 
+
+
+⬤ Respecto al Ancho de banda:
+
+Mientras más ancho de banda tenga nuestra infraestructura, la transferencia de archivos entre nodos, va a ser más rápida.
+
+
+
+--------------------------
+CPU
+--------------------------
+
+
+CPU vs uCPU vs vCPU 
+-------------------
+
+Realmente a nivel de Big Data no se procesa nada en la CPU. Hay otros dos conceptos que tenemos que conocer:  
+
+
+🡆 Núcleos de CPU (uCPU)
+
+Si decimos, tenemos un servidor que tiene 4 CPUs, ¿cuántos procesos podemos ejecutar en paralelo? Uno podría pensar, 4 procesos, 
+1 en cada CPU. No, aún nos falta información. La CPU dentro tienen núcleos de CPU, realmente quien procesa no es la CPU, son sus 
+núcleos, por ejemplo, quizás hemos escuchado, no sé pues, es una laptop de 4 CPUs de 2 núcleos cada uno. Entonces si tenemos un 
+Server de 4 CPUs, donde cada CPU tiene 2 núcleos, entonces, no son 4 procesos, son 8 procesos en paralelo que podemos ejecutar. 
+Cada núcleo de CPU es quien procesa. Por ejemplo: 
+
+                                        Cada CPU del servidor tiene 4 núcleos (uCPU)
+                                        CPU totales: 6 CPUs
+                                        Núcleos de CPU totales: 6 x 4 = 24 uCPUs
+
+                                        Núcleos físcos de CPU =====>  24 uCPUs                                        
+
+Para este ejemplo si tenemos 6 CPUs físicas, donde cada CPU tiene 4 núcleos, eso significa que tenemos 24 núcleos de CPU (uCPU) 
+en nuestro servidor y por lo tanto podemos ejecutar en ese Server hasta 24 procesos en paralelo. 
+
+
+🡆 Virtual CPU (vCPU)
+
+                                        Factor de Hyperthreading: 1.5
+                                        Virtual CPU totales: 24 uCPUs x 1.5 = 36 vCPUs
+
+                                        Núcleos virtuales de CPU =====> 36 vCPUs
+
+Antes de explicar lo que es una virtual CPU, vamos a ver cómo es esto de su cálculo. Hay unas tecnologías, por ejemplo, llamadas 
+hyperthreading, bueno esta es de propiedad de Intel, pero en general, dependiendo de la tecnología que se utilice para construir 
+las CPUs, hay un factor que tenemos que conocer. ¿Para qué utilizamos este factor de hyperthreading? 24 uCPUs son los núcleos 
+físicos que tenemos,  pero en nuestro servidor tenemos una tecnología de hyperthreading, por lo tanto, ¿cuál es el factor de 
+hyperthreading? 1.5. ¿cuál es el número de núcleos de CPU? 24, que por el factor de hyperthreading nos da 36. ¿Qué significa esto? 
+Que con 24 núcleos de CPU podemos ejecutar hasta 36 procesos en paralelo. A este numerito que obtenemos le llevamos vCPUs, porque 
+son CPUs virtuales. Físicamente hay 24 CPUs, pero virtualmente, como podemos ejecutar 36 procesos en paralelo, es como si hubiese 
+36 núcleos de CPU, pero como no son físicos y son virtuales, se les llama vCPUs. 
+
+Así que otra pregunta en tu infraestructura que tendría que hacer es no solamente ¿cuántas CPUs tenemos y cuántos núcleos tiene 
+cada CPU?, si no, si ¿esas CPUs tienen algún factor de hyperthreading? la respuesta puede ser, no, entonces, ¿cuántas vCPUs tienes? 
+las mismas que núcleos de CPUs, 24, porque no hay factor de hyperthreading. La respuesta puede ser, sí tenemos un factor de 
+hyperthreading ,perfecto, la siguiente pregunta es y, ¿cuál es ese factor? El encargado de infraestructura puede que no tenga idea 
+de cuál sea el factor. Si no sabe cuál es el factor, asume que es 1.5 y, por lo tanto, tendrías 36 vCPUs. Eso significa que cada 
+servidor puede correr hasta 36 procesos en paralelo. Por otro lado, si tienes suerte el encargado de infraestructura si conoce el 
+valor del factor y nos va a dar un valor que oscila entre 1.3 y 1.7. Nos dirá el valor y lo multiplicamos por el numero de nucleos 
+físicos de CPUs y obtendremos el valor de vCPUs, que representan cuántos procesos en paralelo puede correr un servidor. 
+
+
+vCPU : Escalabilidad lineal
+---------------------------
+
+¿Por qué es importante saber cuántas vCPUs tenemos a disposición nuestra? porque si nuestros procesos son automáticamente 
+paralelizables, digamos que el proceso 1, con una vCPU, se toma 24 horas. Entonces ese mismo proceso con 2 vCPU se va a tomar la 
+mitad del tiempo y con 3 veces vCPU se va a tomar la tercera parte de ese tiempo. Ahora, obviamente tenemos un límite de vCPUs. 
+Tenemos nuestro cluster y digamos que tenemos 40 vCPUs en cada servidor, si tenemos 40 vCPUs y 10 servidores, tendremos 400 vCPUs 
+para poder hacer lo que nosotros queramos. Ahora si un proceso dice “…oye mira mi nivel de paralelización quiero que sea de 800, 
+voy a ponerme 800 vCPUs”. Eso no tiene ningún sentido porque en infraestructura solamente tenemos 400. Por eso es muy importante 
+saber cuál es el límite físico que tiene nuestro clúster. 
+
+
+Reservar vCPUs para procesos internos
+-------------------------------------
+
+El otro punto importante es que no vas a poder aprovechar el 100% de las de vCPU, porque un servidor para funcionar, por ejemplo, 
+un Server tiene instalado el sistema operativo, el sistema operativo va a restar algunas vCPUs para que el Server funcione, el 
+firewall también, los servicios que instales de Getway, Master y Metadata también. Entonces, del 100% de las vCPUs que tenga el 
+servidor un porcentaje va a estar destinado para que el Server funcione y otro porcentaje va a estar destinado para que tú las 
+utilizas en tus procesos. ¿Cuáles son esos porcentajes? va a depender del rol del servidor. Por ejemplo, en el Gateway, del 100% de 
+las vCPUs que estén disponibles, un 20% van a estar reservadas para que el servidor funcione y un 80% van a estar reservadas para 
+ti. Misma historia con los nodos esclavos, un 20% está reservado para que el Server esclavo funcione y el 80% está reservado para 
+que tú la puedas usar. Para ponerlo en términos fáciles de entender, supongamos que en la potencia computacional completa de tu 
+Clúster tiene 400 vCPUs disponibles, ¿vamos a tener las 400 vCPUs disponibles? solamente vamos a tener un 80% disponibles de esas 
+400 vCPUs. Ahora, ¿qué pasa si no tomas en cuenta esto y piensas que tu límite real de procesamiento son estas 400 vCPUs? lo que 
+va a pasar es que vas a quitarle vCPUs, de las vCPUs que el servidor utiliza para funcionar y probablemente termines colapsando los 
+servidores. Así que es muy importante que sepas que solamente tienes un 80% de la capacidad disponible de vCPUs totales, no el 100%.
+Si no controlas eso a nivel de infraestructura, porque esto ya lo tienes que configurar con tu herramienta de infraestructura, si 
+no tomas en cuenta este factor, es muy probable que los servidores en tu Clúster comiencen ha colapsar, porque no has puesto un 
+límite en el uso de vCPUs para desarrollos.
+
+
+
+--------------------------
+RAM
+--------------------------
+
+
+Consideraciones de RAM
+-----------------------
+
+Nosotros ya sabemos cómo se procesan nuestros programas, el archivo de datos que queremos procesar se carga a la memoria RAM, si 
+por ejemplo, tenemos 100 GB RAM y queremos procesar 1 GB, eso entre fácilmente. Se procesa, el procesamiento se hace en las vCPUs. 
+Mientras más vCPUs instanciemos, más paralelizable va a ser el proceso. Ya sabemos que estas vCPUs dependiendo de la herramienta 
+no van a estar aisladas, si no, que hay containers con las que lo vamos a reservar, por ejemplo, en Hive vimos que son los 
+containers Mappers. Para usar 8 vCPUs requeriríamos de 4 containers, porque el estándar es que cada container tiene 2 CPUs. Al fin 
+y al cabo realmente quien procesa no son los containers, si no, las CPUs dentro de los containers. Procesaremos, haremos lo que 
+tengamos que hacer y el proceso tiene un Output, por ejemplo, un output de 10 GB. Eso también entra en la memoria RAM, no hay 
+problema. 
+
+Pero podría pasar lo siguiente, entra 10 GB de datos, lo procesamos y el output es de 200 GB, eso ya no entra en la memoria RAM 
+(memoria RAM tiene 100 GB), esos 110 GB faltantes, lamentablemente se van a tener que emular de la memoria virtual, así que va a 
+ser muy importante saber cuánta memoria RAM vamos a requerir para nuestros procesos a nivel de infraestructura, porque el developer,
+podría decir “…oye dame 2 TB de RAM…”, pero en el Clúster tenemos el límite de 1 TB de RAM y obviamente este pedido no va a poder 
+ser atendido y vamos a requerir de memoria virtual. Así que a nivel de infraestructura tenemos que tener ya la RAM que van a 
+requerir nuestros procesos. 
+
+
+Reservar RAM para procesos internos
+-----------------------------------
+
+Al igual que en el caso de las vCPUs, acá también existen recomendaciones. Solamente vamos a tener el 80% de la RAM total del 
+clúster para poder utilizarlo en tus procesos. Si en todo el clúster tienes 1000 GB de memoria RAM, solamente vas a poder utilizar 
+800 GB, porque 200 de ellos van a estar reservados para que los servers funcionen. 
+
+
+
+--------------------------
+DISCO DURO
+--------------------------
+
+
+Consideraciones de Disco duro
+-----------------------------
+
+
+Finalmente, respecto a la parte de Disco duro bueno esto creo que ya es fácil de entender para nosotros. Es importante, no 
+solamente enfocarnos en la capacidad del Disco duro, si no, en el número de los Discos duros, para que el sistema de archivos 
+puede paralelizar las escrituras y las lecturas. Adicionalmente a eso, también tenemos que saber que existen diferentes tipos de 
+Discos duros, por ejemplo, tenemos un Disco duro en donde instalamos el sistema operativo, otro Disco duro dedicado a instalación 
+de programas, un Disco duro en donde se guardan archivos temporales (tmp), un Disco duro en donde se guardan los logs de los 
+servicios (log), el Disco duro asignado a la carpeta “home” del Getway donde se conectan los usuarios. Estos Discos duros son 
+estándar en infraestructura, en el mundo del Big Data solamente vamos a tener que hacer sizing de los Discos duros que almacenan 
+datos. ¿Dónde se almacenan los datos? En los nodos esclavos. Todos los nodos, sea cual sea su rol, Getway, Master, Metadata o Slave 
+van a requerir de estos Discos duros (Disco Sistema Operativo, Disco Programas, Disco tmp, Disco log, Disco home, Disco de datos),
+pero obviamente todos los servidores tienen un sistema operativo instalado, entonces tiene que tener un Disco duro del sistema 
+operativo, todos esos son Discos duros estándar de infraestructura. A nivel de Big Data tú solamente te vas a preocupar en hacer 
+el sizing de Discos duros para los nodos esclavos, porque ahí es donde se almacena la data. 
+
+
+---------------------------------------------------------------------------------------------------------------- 
+ _____________________________
+|                             |
+|   Estándar hardware para    |
+|   servidores según roles    |
+|_____________________________|
+
+Para hacer sizing debemos de responder dos preguntas: 
+
+=> ¿Cuántos nodos se necesita según el rol? 
+=> ¿Cuánta RAM, CPU y Disco duro requiere cada servidor según su rol? 
+
+Respondamos la pregunta más fácil. El estándar hardware según el rol. Ya existe un estándar hardware según si quieres Getway, 
+Master, Metadata o Slave. 
+
+
+Nodo Gateway
+------------
+
+Por ejemplo, esta es la configuración estándar mínima que existe para el nodo Gateway: 
+
+32 GB de RAM 
+20 vCPUs 
+
+Como en el Gateway no se almacena nada de HDFS, todo eso va en los nodos esclavos, no necesitas discos de datos. Esto es lo mínimo. 
+
+Lo recomendado:
+
+128 GB de RAM 
+40 vCPUs 
+
+Ahora, también tienes que saber que cada vCPU de un Gateway puede soportar hasta 5 usuarios, por ejemplo, si tuvieses un Getaway 
+de 20 vCPUs, ya sabemos, que primero solamente podemos utilizar el 80% de esas vCPUs, eso quiere decir que tendríamos 16 vCPUs a 
+nuestra disposición. Segundo, cada vCPU soporta hasta 5 usuarios y 16 x 5 = 80, eso significa que un Getway con estas 
+características puede soportar hasta 80 usuarios concurrentes. Tu organización tiene menos de 80 usuarios, en teoría con un Getway 
+te podría bastar, pero todavía no estamos resolviendo el problema de cuántos Gateways necesitamos, solamente estamos diciendo cuáles 
+son las características hardware mínimas y recomendadas que debe tener tu Getway para funcionar, ya luego vemos el número de 
+Gateways necesarios. 
+
+
+Nodo Master
+-----------
+
+En el caso de los Masters, la configuración hardware mínima es de:
+
+128 GB de RAM
+20 vcPUs 
+
+Pero la recomendada es de: 
+
+256 GB de RAM 
+40 vCPUs 
+
+Los nodos Master básicamente reciben peticiones y delegan trabajo, así que es muy raro que salga de estas recomendaciones. De hecho, 
+con el “mínimo” es suficiente. Al menos en la práctica he visto que 1 nodo Master puede responder bien con eso, ya que, el Master 
+solamente es como que pasase la pelota, recibe la petición y decide en qué nodos ejecutar.  
+
+
+Nodo Slave
+-----------
+
+En el caso de los nodos esclavos, aquí es donde va a estar la potencia de procesamiento. Como mínimo que debemos de tener, el 
+estándar nos dice: 
+
+256 GB de RAM 
+40 vCPUs
+20 TB de Disco duro HDD (Disco duro mecánico) para cada nodo esclavo 
+
+Esto es lo mismo. Lo recomendado es:
+
+Lo que el presupuesto de la infraestructura tenga disponible, lo más potente posible que sean los nodos esclavos, porque aquí es 
+donde está el procesamiento. 
+
+En la vida real también he visto que este mínimo no es respetado y dependiendo del presupuesto que tenga la empresa, puede que a 
+veces vayan por la mitad, 128 GB de RAM,  pero no pasa nada, realmente no es eso es lo que se recomienda como mínimo, pero si tú 
+necesitas esos servidores más pequeñitos, no pasa nada, los puedes seguir usando, solamente que la explicación que es el estándar 
+de número de nodos Slave va a cambiar un poco. Pero no nos compliquemos, existe un estándar mínimo, pero nada impide que sean de 
+menor tamaño, no es que de pronto si pones un servidor de 128 GB de RAM ya no va a funcionar la paralelización, no, si va a seguir 
+funcionando. Como les digo, estos son los números que son estándar en la industria, obviamente en una empresa pueden variar.
+
+
+Nodo Metadata
+-------------
+
+Finalmente en el nodo de Metadata como aqui simplemente guardamos, básicamente qué tabla es qué directorio HDFS, tampoco 
+necesitamos tanta potencia. Lo mínimo es: 
+
+32 GB de RAM
+10 vCPUs
+1 TB de Disco duro SSD para guardar esa metadata 
+
+Si se dan cuenta en la recomendación de los nodos esclavos estamos hablando de Discos duros mecánicos, mientras que acá estamos 
+hablando de Discos de almacenamiento en estado sólido. No es necesario que tengas Discos duros SSD para los nodos esclavos, con 
+los HDD clásicos es suficiente, incluso aunque vayas a hacer procesamiento de Real time, porque para eso tenemos patrones que van 
+a optimizar el uso de estos discos. Si recordamos los patrones, no vas a encontrar diferencia directa si es HDD o SDD. Y 
+adicionalmente los discos SSD son más costosos que los HDD, antiguamente el costo era por 10 al menos hace 7 años, ahora que se 
+están abaratando los costos de las tecnologías, el costo de hasta 1 por 3, que significa eso, sí con 100 dólares te compras 1 TB, 
+si quisieras un TB de SSD tendrías que hacer una inversión de 300 dólares, el precio es hasta el triple. Como vas a tener muchos 
+nodos esclavos eso implicaría que tu presupuesto en almacenamiento se va a multiplicar mucho, así que por eso no se recomienda 
+nodos esclavos. Para aumentar velocidades se recomienda usar patrones de arquetipo. En  Real time esto va a quedar mas claro. En 
+el caso de los nodos de Metadata ahí sí vamos a requerir SSD, porque lo que queremos es cuando HIVE lanza una consulta a la tabla, 
+realmente esta viendo que directorio está asociado a esa tabla, queremos obtener esa respuesta lo más rápido posible para comenzar 
+a procesar. Esa información va a estar guardada en SSD, por lo tanto, la lectura de la Metadata va a ser muy rápida. Por eso, en 
+los nodos Metadata se recomienda como mínimo 1 TB SSD, que por efectos prácticos, ese disco sale 100 dolares, así que no pasa nada. 
+
+
+¿Estos números son absolutos? no, son los estándares. Ya dependiendo de la empresa puedes variar este estándar, pero al ser 
+estándar vamos a hacer los cálculos del número de nodos necesarios en función de este estándar. Por ejemplo, para el nodo Gateway, 
+si tenemos 20 vCPUs, ya sabemos que el 80% sería 16 vCPUs y como cada vCPU soporta 5 conexiones, tendríamos hasta 80 usuarios 
+concurrentes. ¿Qué pasa si es que nuestra organización tiene 200 usuarios que van a acceder? como cada servidor Gateway soporta 80 
+conexiones y queremos tener hasta 200 conexiones, tendríamos que tener 3 servidores Gateway. Ese cálculo lo hemos hecho basándonos 
+en los numeros estándar, si tu organización compra servidores más pequeños, el cálculo va a variar, pero la forma en cómo se 
+calcula es la misma. Así que para hacer el cálculo del número de nodos nos vamos a basar en el estándar. Con eso ya tenemos 
+resuelto entonces la primera pregunta ¿cuál es el estándar hardware que necesitamos para cada tipo de nodo? 
+
+---------------------------------------------------------------------------------------------------------------- 
+ _____________________________
+|                             |
+|   Estándar para cantidad    |
+|   de nodos según rol        |
+|_____________________________|
+
+Sizing de nodos por rol
+-----------------------
+
+Ahora la siguiente pregunta que tenemos que responder es ¿cuántos nodos necesitamos, cuántos Getways, Masters, Metadata y Slave? 
+
+Vamos a hacer el sizing de número de nodos. Hay una buena noticia, ya tenemos un estándar para los nodos:
+
++ Gateway
++ Master
++ Metadata
+
+En el caso del Gateway si seguimos las recomendaciones RAM y vCPUs que son estándar, cada nodo recomendado es de 40 vCPUs, cada 
+nodo puede soportar hasta 80 conexiones. Supongamos que tienes 160 conexiones simultáneas necesarias, eso va a implicar que al 
+menos requieres dos nodos Gateway. Punto importante, yo solamente tengo 70 conexiones, ¿eso quiere decir que solo necesito un 
+Gateway? no, el estándar de números de Gateways como mínimo te dice es que tengas 2, porque puede que colapse uno de estos dos 
+nodos por alguna razón. Si colapsa el que Getway, ya no tienes acceso al Cluster. Así que el estándar es al menos 2 nodos y ya 
+sabemos que cada vCPU soporta hasta 5 conexiones simultáneas, así que va a depender. Con un nodo tenemos 80 usuarios, con 2 nodos 
+tenemos 160 usuarios, con 3 nodos tendríamos 240 conexiones y así sucesivamente. El número de nodos exacto saldría en función de 
+las conexiones simultáneas esperadas al Clúster. 
+
+¿Qué va a pasar en el caso del Master? aquí ni siquiera vas a tener que pensarlo, el estándar de Industria es 3 Masters, el Master 
+simplemente recibe una petición y delega trabajo. De hecho ni siquiera hace un pequeño procesamiento, no hace nada. Vamos a ver 
+que en el caso de Spark vamos a hacer unos pequeños procesamientos en el Gateway, pero en el caso del Master, no hace nada. El 
+estándar de industria nos dice que al menos tengas 3 Master instalados, por dos razones: porque si colapsa un Master todavía 
+tenemos otros dos que van a recibir las peticiones y además para tener un algoritmo de consenso, ¿qué significa eso? Para ponerlo 
+en términos muy simples, digamos que el Master 1 decidió que el container se ejecute en el Nodo Slave 1, el Master 2 decidió que 
+el container se ejecute en el Nodo Slave 1 y el Master 3 decidió que el container se ejecute en el Nodo Slave 2. Hay una mayor 
+cantidad de Masters que decidieron que se ejecuten en un mismo servidor, por lo tanto, el container se ejecutaría en ese servidor. 
+¿Qué pasaría si tuviésemos un número par de Masters? podría darse este caso, 2 Masters dicen que se ejecute en el Nodo Slave 1 y 
+los otros 2 Masters dicen que se ejecute en Nodo Slave 2, por lo tanto, no se puede tomar una decisión. Por eso se recomienda tener 
+un número impar de Masters, pero no pueden ser dos, tienen que ser al menos 3. 
+
+En el caso de los nodos de Metadata el estándar mínimo te dice que tengas dos. ¿Qué se almacena en la metadata? que tal tabla es 
+tal directorio de HDFS. Si pierdes ese mapeo de metadatos, por más réplicas de directorios y archivos que tengas en los esclavos ya 
+no sabes qué tabla es qué directorio, así que al menos debes tener una copia adicional de esa metadata en tu infraestructura. El 
+estándar mínimo es 2, pero ya va a depender de como tu organización trabaje el numero de copias de metadatos. 
+
+---------------------------------------------------------------------------------------------------------------- 
+ ________________________
+|                        |
+|   Casos típicos de     |
+|   infraestructura      |
+|________________________|
+
+Desarrollo o certificación
+--------------------------
+
+Ahora nos falta resolver el número de nodos esclavos. ¿Cuántos? Obviamente, ya sabemos que aquí está la potencia, va a depender 
+del caso. Hay dos casos típicos de infraestructura para los nodos esclavos que se repiten mucho. El de Desarrollo y el de 
+Certificación. Hay un estándar para ambientes de desarrollo y de certificación, el cual te dice ten 10 nodos esclavos. ¿Qué es lo 
+que pasa en la vida real? tenemos el Clúster de Desarrollo, el Clúster de Certificación y el Clúster Productivo. El desarrollador 
+se conecta el clúster de desarrollo, comienza a trabajar, termina de trabajar, saca su proceso de del cluster de desarrollo y lo 
+prueba en el ambiente de certificación. Si está todo correcto, tu proceso ya vive de manera permanente en el cluster Productivo. 
+Los clusters de desarrollo y certificación se van liberando cada vez que hay un paso a producción, pero en el cluster productivo 
+es donde ya el proceso vive de manera permanente. Al día siguiente vendrá desarrollador a otro proceso, lo probará y pasará al 
+cluster productivo y vivirá de manera permanente en producción, pero si te das cuenta los clusters de desarrollo y certificación 
+se van liberando una vez que hay un pase a producción, así que no es necesario tener la misma potencia en desarrollo y 
+certificación que en tu cluster productivo. Hay un estándar que te dice que puedes tener 10 nodos en tu ambiente de desarrollo y 
+10 nodos esclavos en tu ambiente productivo y es raro que vayas a requerir más potencia si tienes un flujo de DevOps bien definido 
+para que los pases se vayan haciendo entre ambiente, porque implica que ya se van liberando. ¿Cuál es el estándar que te dice 
+entonces el número de nodos esclavos? si estás en un clúster de desarrollo o de certificación, el estándar te dice coloca 10 
+servidores como mínimo. Obviamente dependiendo del presupuesto puedes tener menos o más servidores, pero esta potencia 
+computacional no es la que tu vas a calcular para tu cluster productivo, en donde van a ir acumulándose todos los procesos que 
+desarrollemos. 
+
+
+
+Producción
+----------
+
+El problema solamente va a estar en el clúster productivo entonces, ahí sí van a vivir los procesos de manera permanente. 
+Inicialmente de alguna manera vamos a tener que hacer el cálculo de números de servidores esclavos para nuestro entorno productivo. 
+Digamos que necesitamos 100 servidores esclavos, aún no sabemos cómo hacerlo, pero digamos que sale este número. Esto significa 
+que al día siguiente, van a haber 10000 procesos que vamos a ir desarrollando, eso significa que al día siguiente de que tu compres 
+los 100 servidores, ya tienes implementados estos 10000 procesos, obviamente no. Primero programaras algunos en tu cluster de 
+desarrollo, esos algunos se probarán en el cluster de certificación y si están correctos, recién pasaran al cluster de producción. 
+Quizá en el primer mes harás 5 procesos, el siguiente mes otros 5 y así. ¿Por qué es importante entender esto? porque si en tu 
+cálculo de sizing para tus nodos en entorno de producción te sale 100, no es necesario que los compres inmediatamente, generalmente 
+tienes que tener una estrategia de ir trayéndolos de poco en poco, por ejemplo, el estándar te dice hay que ir desplegándolos de 
+10 en 10, porque al día siguiente de que sabes la infraestructura, el entorno de producción no va a tener todos los procesos ya 
+implementados, si no, que en función de cómo se van implementando ya van a ir viviendo en el cluster productivo, así que puedes 
+tener una estrategia de este tipo. Si te sale este número, 100 nodos para dar soporte a un clúster por 5 años, no significa que 
+al día siguiente todo el presupuesto se vaya para 5 años, puedes tener una estrategia trimestral o semestral de ir comprando los 
+servidores en función de cuántos procesos vayas desarrollando.
+
+---------------------------------------------------------------------------------------------------------------- 
+ _______________________
+|                       |
+|   Calculo de numero   |
+|   de nodos Slave      |
+|_______________________|
+
+¿Y cómo saber cuántos servidores esclavos en total vamos a requerir para nuestro entorno productivo? ese es el cálculo del número 
+de nodos esclavos. Y al igual que el tunning, desde el punto de vista académico, realmente para hacer el cálculo de sizing de los 
+nodos esclavos, de antemano deberíamos saber cuántos procesos van a vivir en el clúster y cuánta RAM y CPU va a requerir cada uno 
+de estos procesos para cumplir el nivel de servicio esperado por negocio. Si nosotros pudiéramos saber de antemano cuánta RAM y 
+CPU requiere cada proceso para cumplir ese nivel de servicio, ya sabríamos entonces, pongamos números fáciles de manejar, cada 
+proceso requiere de 5 GB de RAM y 2 vCPUs y tenemos 10000 procesos, por lo tanto, requeriremos de 50000 GB de RAM y 20000 vCPUs y 
+listo, como cada server tiene 40 vCPUs, dividimos esto entre el número de vCPUs y ya podemos saber el número de nodos esclavos. 
+Eso sería lo ideal, pero tú de antemano no puedes saber cuánta RAM y CPU van a requerir los procesos que vas a implementar, porque 
+se supone que primero preguntas la lógica del negocio y luego implementas el tunning y vas a entender cuáles son los números 
+correctos para cumplir ese nivel de servicio esperado. Así que es impráctico, hay mucha teoría académica que te dice cómo calcular 
+el número de nodos esclavos en función de la RAM y CPU, pero es irreal, porque tú no sabes de antemano cuánta RAM y CPU requiere 
+cada proceso. Así que vamos a utilizar un método que no es tan exacto, pero es más práctico en la vida real. 
+
+Ya sabemos que todo proceso, tenemos muchos procesos, requiere de un input para funcionar. Todos requieren de un input. Si tú a 
+nivel de Disco duro como mínimo no puedes almacenar este input no vas a poder procesar nada, tienes que tener el input capturado, 
+por ejemplo, con procesos de ETL tienes que capturar esa data input. Así que este va a ser nuestro punto de partida para saber 
+cuántos nodos esclavos vamos a requerir, el input de la data que van a utilizar nuestros procesos. Por ejemplo, ¿qué procesos van 
+a estar implementados en nuestro Data Lake? Por decir algo, procesos relacionados con la base de datos de clientes, con la base de 
+datos de empresas, con la base de datos de transacciones y así, con muchas bases de datos. Perfecto, ya sabemos que el primer paso 
+es hacer el CTRL + C y CTRL + V, tenemos que capturar la data. Las tablas de esta base de datos que vamos a cargar, ¿cuánto pesa? 
+vamos a poner números fáciles de manejar, son 3 bases de datos, es decir, las tablas pesan 100 GB, 200 GB y 300 GB respectivamente. 
+Supongamos que solamente queremos dichas tablas a nuestro Data Lake. Eso significa que en total los datos históricos que queremos 
+subir en el Data Lake son 600 GB. Siguiente pregunta, y ¿hay datos delta (eso quiere decir, por ejemplo, en los archivos de 
+transacciones el dia 21 te dejaban un archivo de transacciones, el día 22 te dejan otro archivo de transacciones)? algunas tablas 
+te dirán que sí otras tablas quizá te digan que no. Para aquellas tablas en donde se diga que sí va a haber un delta que se va a 
+dejar cada cierto tiempo, la siguiente pregunta es ¿cuál es la periodicidad, diario, semanal o mensual? Luego, qué más tenemos que 
+saber, y ¿cuánto pesa ese delta, ese pequeño archivo de información que vas a dejar?.
+
+                         HISTORICO       DELTA      PERIOCIDAD     PESO ARCHIVO DELTA
+ _________              ______________________________________________________________
+|         |                         |            |              |                     |
+|  MySQL  | --------->     100 GB   |     SI     |    DIARIO    |         1 GB        |  
+|_________|                         |            |              |                     |             
+ _________                          |            |              |                     |     
+|         |                         |            |              |                     | 
+|  Oracle | --------->     200 GB   |     NO     |     -----    |         -----       |  
+|_________|                         |            |              |                     |         
+ _________                          |            |              |                     |     
+|         |                         |            |              |                     |  
+|   DB2   | --------->     300 GB   |     SI     |    SEMANAL   |         2 GB        |  
+|_________|            _____________|____________|______________|_____________________|
+
+Ya tenemos entonces el input qué vamos a procesar. ¿Qué más tenemos que saber? vamos a estandarizar y calcular el delta anual. Y, 
+¿qué es esto del delta anual? para aquellos archivos en donde cada día te dejan un cachito de la información, multiplicamos el peso 
+de esa información por la periodicidad, es decir, 1 GB diario en 1 año serían 365 GB y 2 GB semanales en 1 año (52 semanas) vamos 
+a acumular 104 GB. 
+
+                         HISTORICO       DELTA      PERIOCIDAD     PESO ARCHIVO DELTA      DELTA ANUAL
+ _________              __________________________________________________________________________________
+|         |                         |            |              |                     |                   |  
+|  MySQL  | --------->     100 GB   |     SI     |    DIARIO    |         1 GB        |      365 GB       |  
+|_________|                         |            |              |                     |                   |  
+ _________                          |            |              |                     |                   |  
+|         |                         |            |              |                     |                   |  
+|  Oracle | --------->     200 GB   |     NO     |     -----    |         -----       |        0 GB       |   
+|_________|                         |            |              |                     |                   |   
+ _________                          |            |              |                     |                   |   
+|         |                         |            |              |                     |                   |   
+|   DB2   | --------->     300 GB   |     SI     |    SEMANAL   |         2 GB        |      104 GB       |   
+|_________|            _____________|____________|______________|_____________________|___________________|
+
+
+Esto significa que la primera carga histórica de todos los datos nos va a ocupar 600 GB y anualmente vamos a estar cargando 469 GB. 
+Ahora, supongamos que el peso histórico nos salió 1000 TB y supongamos que el peso del delta por año nos salió 100 TB. Una vez que 
+ya tienes calculado estos 2 numeritos construyes una tabla de este tipo: si quiero tener un soporte de almacenamiento por 1 año 
+completo, ¿cuánta capacidad de Disco duro debo de tener? sería el peso histórico más el peso anual: 1100 TB. Si quiero tener una 
+capacidad de almacenamiento de 2 años, ¿cuánto voy a necesitar? 1000 TB por cuántos años que se generen, serían 1200 TB. Si queremos 
+tener soporte de 3, 4 y 5 años según estos números, saldrían 1300 TB, 1400 TB y 1500 TB. 
+
+                                                ____________________
+                                                        |           |
+                                                 1 AÑO  |  1100 TB  |
+                                                        |           |
+                                                 2 AÑO  |  1200 TB  |
+                                                        |           |
+                                                 3 AÑO  |  1300 TB  |
+                                                        |           |
+                                                 4 AÑO  |  1400 TB  |
+                                                        |           |    
+                                                 5 AÑO  |  1500 TB  |
+                                                ________|___________|        
+
+
+Pero recordemos que en sistemas de archivos distribuidos, hay factores de replicación, algunos serán por 3, otros serán por 5, pero 
+debemos asumir que es por 3, porque de antemano no podemos saber cuál va a ser el factor de replicación de cada archivo. En tiempo 
+real, por ejemplo, algunos van a ser por 5, asume que es por 3. Eso significa que como todo se va a replicar 3 veces, realmente los 
+números que vas a requerir son estos de aquí:
+                                                ________________________________
+                                                        |           |           |
+                                                 1 AÑO  |  1100 TB  |  3300 TB  |
+                                                        |           |           |
+                                                 2 AÑO  |  1200 TB  |  3600 TB  |
+                                                        |           |           |
+                                                 3 AÑO  |  1300 TB  |  3900 TB  |
+                                                        |           |           |
+                                                 4 AÑO  |  1400 TB  |  4200 TB  |
+                                                        |           |           |
+                                                 5 AÑO  |  1500 TB  |  4500 TB  |
+                                                ________|___________|___________|
+
+Finalmente, el tercer paso. Según el estándar de infraestructura como mínimo tenemos Discos duros de 20 TB cada uno y el recomendado 
+es de 100 TB. Vamos a trabajar con el recomendado. El Cluster necesita de 3300 TB, cada servidor esclavo almacena 100 TB, ¿cuántos 
+servidores esclavos vamos a requerir para almacenar 3300 TB? 33 servers. Si queremos tener un soporte de 3600 TB, serían 36 servers, 
+si queremos tener un soporte para 3900 TB serian 39 servers, para 4200 TB serian 42 servers y para 4500 TB serian 45 servers. Para 
+que nuestro clúster pueda funcionar bien por 1 año, 33 servidores, por 2 años 36 servidores, por 3 años 39 servidores y así 
+sucesivamente. 
+                                        _________________________________________________
+                                                |           |           |                |   
+                                         1 AÑO  |  1100 TB  |  3300 TB  |  33 servidores |
+                                                |           |           |                | 
+                                         2 AÑO  |  1200 TB  |  3600 TB  |  36 servidores |                
+                                                |           |           |                | 
+                                         3 AÑO  |  1300 TB  |  3900 TB  |  39 servidores |
+                                                |           |           |                | 
+                                         4 AÑO  |  1400 TB  |  4200 TB  |  42 servidores |
+                                                |           |           |                | 
+                                         5 AÑO  |  1500 TB  |  4500 TB  |  45 servidores |
+                                        ________|___________|___________|________________|
+
+Finalmente, lo último que queda por hacer son los costos. Suponiendo que tenemos servidores de 100 TB y seguimos las recomendaciones, 
+256 GB de RAM y 40 vCPUs, vamos a trabajar con el estándar para hacer el cálculo, probablemente esto nos salga:
+
+10000 USD por servidor. Si cada servidor está a 10000 USD y tenemos 33 servidores, eso significa que el presupuesto para 1 año sería 
+de 330000 USD, 360000 USD,  390000 USD y así sucesivamente. Obviamente va depender, o sea, si tu empresa tiene 3300 TB sería una 
+empresa grande y estos costos serían fácil, por ejemplo, para un banco estos números en dólares no es nada, va a depender por eso de 
+lo que quieras hacer con el servidor. Listo, ya tienes entonces esta información que vas a presentar. Al tomador de decisiones que 
+va a aprobar el presupuesto le va a importar lo siguiente: 
+
+1.- El tiempo en el cual no vamos a requerir (en años) más servidores 
+2.- La capacidad que en total vamos a tener 3300 TB y así sucesivamente
+3.- El número de servidores para soportar esa capacidad
+4.- Y lo más importante, el costo. 
+                                        ______________________________________________________
+                                                |           |                |                |   
+                                         1 AÑO  |  3300 TB  |  33 servidores |  330.000 USD   |
+                                                |           |                |                | 
+                                         2 AÑO  |  3600 TB  |  36 servidores |  360.000 USD   |                
+                                                |           |                |                | 
+                                         3 AÑO  |  3900 TB  |  39 servidores |  390.000 USD   |
+                                                |           |                |                | 
+                                         4 AÑO  |  4200 TB  |  42 servidores |  420.000 USD   |
+                                                |           |                |                | 
+                                         5 AÑO  |  4500 TB  |  45 servidores |  450.000 USD   |
+                                        ________|___________|________________|________________|
+
+
+¿Qué es lo que podría pasar? tenemos múltiples opciones elige la que tu desees. Mira, en 5 años va a salir muy caro, voy a elegir 
+tener un Cluster que no requiera más soporte por 2 años, el cual requiere de 36 servidores. Yo como encargado de la parte de 
+infraestructura, digo "...perfecto, recuerda que para amortizar la inversión no vamos a requerir tener los 36 servidores al día 
+siguiente, podemos seguir una estrategia trimestral de ir trayéndolos, en el primer trimestre 10, en el segundo 10, en el tercer 
+trimestre 10 y finalmente en último trimestre 6 servidores...". De esa manera en el trimestre uno cuando muestras tu reporte de 
+presupuestos de gerencia, no va a haber un pico de dinero que se ha gastado, si no, que va a estar estable el presupuesto, cada 
+trimestre se está gastando una parte del presupuesto. Podría pasar eso. Lo otro que podría pasar es que te podrían decir: 
+"...mira yo quiero tener soporte para 1 año pero 330000 USD es demasiado, puedo gastar la tercera parte, 100000 USD..." perfecto, 
+no pasa nada, si tenemos servidores de 300 GB de RAM y 30 vCPUs, pero tú no tienes presupuesto para comprar estos, el Disco duro 
+no se puede mover, pero sí podemos sacrificar potencia computacional, entonces compremos servidores de 100 GB de RAM y de 10 vCPUs, 
+ya que, no hay presupuesto para eso. Seguiremos teniendo el mismo número de servidores, pero ya serán menos potentes. ¿Cuál es el 
+punto importante aquí? ya tienes números y un estándar con el cual puede ser tu punto de partida para empezar a ver cómo calcular 
+el presupuesto de infraestructura y llegar a un consenso con el encargado de presupuesto y a plantear estrategias de despliegue 
+para que el presupuesto no se gaste tampoco de un día para otro.
+
+En resumen, el punto de partida cálculo son los pesos de las fuentes que vamos a cargar al Data Lake y construir una tabla para 
+mostrar al tomadro de decisiones y decirle: “… mira con tantos años, tenemos tanto peso y vamos a tener tantos servidores y eso 
+nos sale tanto en $...” y en función de eso comenzar a negociar el presupuesto.
+
+Listo, se tomó la decisión. Ahora nos queda por realizar la instalación del Cluster. Un clúster uni-nodal que en la vida real se 
+utiliza para que uno practique y el verdadero que es el clúster multi-nodal. Si quieres practicar con la instalación, se recomienda 
+que primero se instale el clúster uni-nodal y luego vayas al multi-nodal. Pero te aseguro que dentro de una empresa es más valorado 
+saber hacer un buen sizing que saber instalar el Clúster, porque en el sizing va a salir al final el presupuesto y ahí es donde se 
+va a justificar la inversión, la infraestructura generalmente es la parte más costosa, al menos al inicio en el despliegue de un 
+Cluster.
+
+El último punto importante que hay que entender es que el sizing es independiente de si esto va a ir en on-premise o en Cloud. Al 
+final, si se necesitan 10 servidores, siempre van a ser 10 servidores, sea en Azure, en Amazon, sea en nuestras propias oficinas. 
+En el video de instalación del Cluster, esta se hace sobre servidores de Azure, pero el mismo video puede ser aplicado tanto para 
+servidores de Amazon o servidores de Huawei de cualquier otro sistema Cloud, ya que, los videos lo hemos hecho agnósticos al 
+proveedor, para que puedas practicar en tu proveedor favorito. De hecho cada proveedor te vende Cluster pre-montados, desde el 
+punto de vista si tu los montaras manualmente te va a salir más caro. Así que se recomienda un tipo de instalación más a medida.

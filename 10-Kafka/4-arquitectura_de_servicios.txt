@@ -1,0 +1,8 @@
+ARQUITECTURA DE SERVICIOS
+=========================
+
+Y respecto a la arquitectura de servicios, en el caso de Kafka no vamos a requerir un servidor Máster, 
+solamente necesitamos que es Getway y Slave. En el caso del nodo Getway el servicio se llama Getway y 
+en el caso de los nodos esclavos, el servicio se llama Broker. Por supuesto que esto es como les dije 
+una infraestructura dedicada, a parte, no es la misma infraestructura que hemos estado viendo hasta el 
+momento, son otros servidores. 

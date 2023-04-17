@@ -1,0 +1,244 @@
+ARQUITECTURA DE PROCESAMIENTO REAL TIME
+=======================================
+
+Funcionamiento de una computadora común
+---------------------------------------
+
+Ahora que hemos entendido esta teoría general, vamos a revisar un poco más del detalle formal que conforma este patrón. 
+Primero hay que entender cómo es que procesa la CPU dentro de una computadora, nosotros sabemos que, por ejemplo, 
+actualmente las laptops son multinúcleos, digamos que estamos hablando de laptop antiguas, una laptop que solamente tiene 
+una CPU, si abrimos varios programas cada programa tiene su propio juego de instrucciones, estas instrucciones se van a 
+ejecutar en la CPU, pero como solo tenemos una CPU las instrucciones van a ir intercalándose una tras otra para cada 
+programa, solamente qué cada instrucción se ejecuta tan pero tan rápido que aparentemente los 3 programas están corriendo 
+de manera paralela, pero como solo hay una CPU a eso se le llama PSEUDO PARALELISMO, ya que como corre tan rápido pareciera 
+que es Paralelismo pero no lo es. Esto en el mundo tradicional no importa mucho, pero en el mundo del Big data importa 
+muchísimo. 
+
+
+Funcionamiento de una computadora común con más de una CPU
+-----------------------------------------------------------
+
+Si realmente tuviéramos una CPU para cada programa que abriésemos en nuestra computadora, ahí recién se estarían ejecutando 
+de manera simultánea, tendríamos un paralelismo real. Solamente si la CPU está ejecutando un hilo de procesamiento, a eso 
+se le conoce como un PARALELISMO REAL. Si una misma CPU tiene 2 hilos de procesamiento que compiten entre sí, eso es 
+PSEUDO PARALELISMO. 
+
+
+Funcionamiento de un server
+---------------------------
+
+Hemos visto que en los servidores de Big data vamos a tener mucha buena potencia, entre ellos muchísimas CPUs. Ya sabemos 
+también que un porcentaje de esas CPUs, el 20% va a estar reservado para que el servidor funcione y el resto va a estar 
+asignado ya para que tus procesos los puedan usar. Por ejemplo, si un servidor tuviese 6 CPUs y tuviésemos 10 procesos que 
+están corriendo en paralelo, habrán algunos que van a tener que compartir una misma CPU para poder ejecutarse, esos procesos 
+estarán ejecutándose con PSEUDO PARALELISMO. 
+
+
+Un proceso paralelizable
+------------------------
+
+En el mundo tradicional, no debería importarnos eso. pero en el mundo del Big data sí va a afectar. ¿Por qué? recordemos que 
+nosotros vamos a tener un proceso, como estamos sobre servidores de Big data vamos a poder paralelizar la ejecución de nuestro 
+proceso, esa paralelización solamente se puede asegurar si cada hilo de petición se está ejecutando en una CPU que no tiene
+más hilos de petición, ¿qué significa esto? supongamos que el proceso 6, le decimos dame 2 container y sabemos que cada container 
+por estándar tiene 2 CPU y se asignan cuatro CPU, ¿cuáles toma el proceso 6? toma CPUs que ya están utilizandose, obviamente 
+ahí va a haber un PSEUDO PARALELISMO, porque van a haber procesos que están compitiendo por las mismas CPUs, y van a intercalar 
+su ejecución y al intercalar su ejecución ya perdiste el paralelismo y al perder el paralelismo, pierdes la escalabilidad lineal. 
+Es por eso que el PSEUDO PARALELISMO es un anti patrón dentro del mundo Big data, hace que la escalabilidad lineal deje de 
+cumplirse. 
+
+
+Un proceso paralelizable sobre un clúster
+-----------------------------------------
+
+Por supuesto, qué es lo que pasaba cuando empezamos a tener más procesos que CPUs,  pues como estamos en un Cluster de Big data 
+no hay ningún problema, supongamos que queremos paralelizar mucho este proceso, tendriamos que crear 6 containers para tener 
+12 CPU,  si estamos en Spark serían EXECUTORS y estamos paralelizando nuestro proceso. Así que un Cluster de Big data te garantiza 
+que mira tus procesos pueden ser todo lo escalables que quieras, siempre y cuando tengas una buena infraestructura, además los 
+gestores de recursos como YARN garantizan de que si un proceso también quiere separar CPUs, va a separar CPUs que en ese momento 
+no estén ejecutando hilos de procesamiento de otro programa, entonces, digamos que hay una buena solución, pero esto solo en el 
+mundo Batch, porque en el mundo del tiempo real va a haber un completo desgobierno. 
+
+
+Funcionamiento de un proceso BATCH
+----------------------------------
+
+Vamos a hacer entonces un versus entre el Batch y el Real time, ¿cómo funciona un proceso Batch? es muy simple, un proceso Batch 
+tiene una hora de inicio y si lo hemos tuneado, digamos que mira con un container de 2 CPUs, de 2 vCPUs se demora 2 horas, pero 
+me han pedido que esté en 1 hora, bueno entonces levantaré otro container adicional que me va a separar 2 CPUs más y listo, se va 
+a demorar 1 hora, por lo tanto, la hora de fin más o menos minutos más minutos menos va a ser las 2:00 de la mañana, ya tenemos 
+controlado este proceso Batch con una hora de inicio y hora de fin. Adicionalmente, el gestor de recursos que tenemos, sea Yarn 
+o sea otro de Big data, va a garantizar que cada una de las CPUs que hemos separado, solamente tengo un hilo de procesamiento, 
+así que muy bien ahí. 
+
+
+Funcionamiento de un proceso REAL TIME
+--------------------------------------
+
+¿Pero qué va a pasar en un proceso de Real time? como pusimos en el ejemplo de comentarios de Facebook, no es que Facebook te 
+habilita de cierta hora a cierta hora la realización de los comentarios, no, es un proceso permanente, puedes hacer un comentario 
+a la 1:00 de la tarde o a la 1:00 de la madrugada, así que no hay ni una hora de inicio ni una hora de fin bien definida. El 
+segundo problema, es que hay mucho desorden en las peticiones, de pronto puede que vengan solo 1000 peticiones por segundo, pero 
+de pronto, no sé, hay un escándalo político y hace que la gente vaya a redes sociales y ahora vienen cientos de miles de peticiones 
+por segundo, así que no tienes un control de eso, el problema es que si vienen demasiadas peticiones, un solo proceso puede 
+monopolizar el uso de las CPUs, y ya sabemos que hay más procesos que ya no van a poder hacer uso de esas CPUs porque las han 
+monopolizado, eso es un anti patrón, la monopolización del real time. Las peticiones de procesamiento se atienden como van 
+llegando, al desorden y por supuesto empresarialmente hablando esto es un gran problema. 
+
+
+Micro-batch
+-----------
+
+Así que la solución que habíamos planteado, vamos a utilizar un patrón de diseño de Big data conocido como MICRO BATCH. ¿En qué 
+consiste este patrón? ya conocemos el concepto de STORM DATA, muchas peticiones, que separadas cada una pesa menos de 1 MB o 1 KB, 
+pero en conjunto pesan muchísimo y que se van generando cientos de miles cada segundo. El problema es que supongamos que tenemos 
+una infraestructura con cientos de miles de CPUs, lo podríamos atender y por lo tanto el orden de procesamiento estaría en el 
+rango de los microsegundos o nanosegundos, se va a poder atender. El problema es que esa infraestructura tendría que ser 
+extremadamente grande y por lo tanto no sería práctico, que va a pasar con nuestros otros procesos en nuestro Clúster, simplemente 
+no se van a ejecutar. Y como se comentó anteriormente, vamos a poner entonces un componente que va a estar dedicado exclusivamente 
+a capturar el STORM DATA y va encolar todos estos registros por un tiempo que nosotros configuremos y luego va a enviar a procesar 
+en un pequeño archivo todo aquello que hemos capturado en el Clúster. Puedes mandarle un hilo de procesamiento si así gustas o si 
+quieres puedes aplicar las técnicas de Batch, no se pues, vamos a partir el archivo en 4 para enviarlo a 4 containers diferentes, 
+y por lo tanto, para que vaya cuatro veces más rápido. El punto aquí es entender que gracias a este componente de encolamiento, 
+todas las técnicas de Batch que conoces para tunear las vas a poder seguir aplicando. Por supuesto que esto se penaliza en el 
+tiempo, ya no se va a hacer en un microsegundo, ahora todo el procesamiento probablemente se va a hacer en 1, 2 o 3 segundos. Pero 
+por supuesto, hay una diferencia abismal entre un microsegundo y un segundo, que es más o menos 100000 veces más rápido uno que 
+otro, pero para efectos de un usuario común, a él le va a dar igual si está en un microsegundo o en un segundo, para él seguirá 
+siendo tiempo real. Pero tendremos la ventaja de que tendremos una infraestructura dedicada solamente a capturar los datos durante 
+un periodo corto de tiempo y luego nuestro Cluster de procesamiento vamos a seguir procesándolo como siempre, sin que haya un 
+desgobierno en recursos computacionales. Por eso, el patrón de MICRO-BATCH se prefiere sobre una implementación puramente de tiempo 
+real. ¿Cuándo se justificaba una de estas? ya lo sabemos, si el usuario logra ver una diferencia entre estos tiempos, ahí se 
+justificaría, ya dependerá del caso de negocio. Pero les adelanto que en el mundo empresarial ningún usuario va a ver una diferencia 
+entre un microsegundo y un segundo. 
+
+
+Funcionamiento de un server para un proceso micro-batch
+-------------------------------------------------------
+
+Entonces, gracias al patrón de procesamiento MICRO-BATCH, vamos a tener un componente que nos va a ordenar los datos, que va a 
+entregar un archivito y tú ya puedes paralelizar ese archivito como si fuera un procesamiento de tiempo real y por supuesto que 
+este componente de encolamiento como va a estar soportando el STORM DATA, no va a tener 1 hora de inicio y fin bien definida, va 
+a estar permanentemente abierto, ¿qué significa permanentemente abierto? recordemos que la captura de los datos, para la parte de 
+la infraestructura que realizará el encolamiento, la vamos a hacer en la memoria RAM. Supongamos que cada segundo se capturan 
+100 MB de datos, eso significa que en la memoria RAM de la infraestructura de encolamiento, de manera permanente va a estar 
+reservado 100 MB de la memoria RAM. Supongamos que esta infraestructura, pongamos un número fácil de manejar, tiene 1000 MB de RAM 
+en total y tienes 10 procesos que cada uno tiene 100 MB separados, con 10 procesos ya estaría lleno y tendrías que comprar más 
+servidores para incrementar la potencia de la infraestructura de encolamiento. El punto es memoria RAM que está permanentemente 
+ocupado y no se va a liberar nunca, a menos claro que ya apagues el proceso de tiempo real. También gracias a este patrón hay 
+garantía de que ya cada CPU solamente va a tener un hilo de procesamiento, ya sabemos, que si hay una un hilo de procesamiento 
+por CPU se van a seguir cumpliendo todos los conceptos de escalabilidad y por lo tanto todas las técnicas de tuning en batch que 
+tú conozcas, las vas a poder seguir aplicando en estos flujos de tiempo real. Generalmente puede variar, pero generalmente el 
+tiempo de encolamiento es de 1 segundo, pero no hay una norma general de cada cuánto encolar la data, ya dependerá de la realidad 
+de cada negocio, por ejemplo, hay algunos que pueden darse el lujo de esperar 10 segundos, porque, para ellos el negocio de tiempo 
+real es 10 segundos, otros 1 minuto. Así que no se guíen por eso de 1 segundo, es solo un tiempo referencial, va a depender de lo 
+que negocio entienda como tiempo real, ahí si tú le dices: “…mira tenemos un retraso de un día en las transacciones de visa…” te 
+van a decir un día es demasiado y tú dices: “…vamos a poder ver todas las transacciones con un retraso de 30 segundos…” quizá para 
+negocios 30 segundos es suficiente, no lo sabemos. Asi que el tiempo de encolamiento es muy relativo, el estándar es 1 segundo, 
+pero en el mundo empresarial va a variar dependiendo de lo que tú necesitas. A esto se le conoce como el patrón de MICRO-BATCH COMO 
+REAL TIME. Las peticiones se van a procesar por lotes pequeñitos conformados por la tormenta de datos. 
+
+
+Arquetipo base para un proceso batch
+------------------------------------
+
+Así que vamos a tener que modificar un poco los arquetipos que hemos estado implementando. Aquí tenemos el arquetipo para un 
+procesamiento en Batch, es muy simple, tenemos un gran archivo en la fuente de datos, hay que ingestarlo, lo guardamos y lo 
+procesamos. Todo esto se va a hacer sobre un único hilo de procesamiento o si aumentamos el número de containers, pues vamos a 
+tener más hilos. Obviamente el end to end en este arquetipo esta dibujado de una manera muy general, ya sabemos, que hay toda 
+una serie de reglas que tenemos que respetar para este proceso en Batch.
+
+
+Arquetipo base para un proceso real time
+----------------------------------------
+
+Si hiciésemos un procesamiento en tiempo real como arquetipo es exactamente igual que el procesamiento en batch, pero el problema 
+es que ya no vamos a tener un hilo de procesamiento o 10, si estamos paralelizando, si no, que vamos a tener cientos de miles de 
+hilos de procesamiento que entre cada capa de la arquitectura, van a estar compitiendo por uso de recursos computacionales. Por 
+ejemplo, si apuntamos directamente al Clúster para ingestar la data, vamos a tener el primer problema: 
+
+1.- Múltiples conexiones simultáneas, nuestra red de ethernet probablemente va a colapsar, porque, una cosa es tener una una 
+    petición de conexión de un archivo muy grande y otra cosa es tener cientos de miles de usuarios que se están conectando de 
+    manera concurrente con una petición pequeñita, se manejan de una manera diferente, probablemente lo primero en colapsar va a 
+    ser la red del Clúster. Supongamos que pasa toda la data que hemos ingestado, probablemente lo que va a colapsar ahora es tu 
+    disco duro, recuerda que tenemos muchísimos discos duros para paralelizar escritura, pero no creo que vayamos a tener 100000 
+    discos duros para poder paralelizar todo lo que está lloviendo. ¿Qué es lo que puede llegar a pasar? que de hecho lo vi hace 
+    años en Clúster on-premise. En Cloud no pasa, porque si Cloud detecta eso te corta las peticiones, pero en un on-premise en 
+    el peor de los casos, los cabezales de lectura y escritura del disco duro se quema, literalmente, por tantas peticiones que 
+    empiezan a venir, el cabezal no funciona y simplemente se quema y el disco duro se malogra. 
+
+2.- Suponiendo que podemos pasar el disco duro, ¿cuál va a ser el otro problema? las CPUs para procesar, no vamos a tener cientos 
+    de miles de CPUs y si las tuviésemos estarían asignados solo a un proceso de tiempo real y sobre nuestro Clúster no vamos a 
+    poder correr nada más que ese proceso en tiempo real. Además, que no tendríamos un gobierno de recursos computacionales, porque, 
+    literalmente ese proceso estaría monopolizando todo. 
+
+Entonces, vemos que seguir un arquetipo de real time tiene muchísimos problemas, obviamente los tiempos están cortísimos aquí, 
+microsegundos, pero no se justifica, hay demasiados problemas. 
+
+
+Arquitectura base para un proceso micro-batch como Real Time
+------------------------------------------------------------
+
+Así que en un mundo empresarial, este es el patrón ya formal que se va a seguir, el de MICRO-BATCH. ¿En qué consiste este patrón? 
+lo hemos explicado anteriormente de manera muy general, ahora sí vamos si vamos a dar un detalle más profundo. 
+
+Tenemos una SOURCE (fuente de datos), hablemos de Facebook que todos conocemos. Se habia dicho que el primer paso es capturar esa 
+tormenta de datos, aquí, en el componente de encolamiento. Pero no es que los datos de Facebook se vayan a mover a tu componente 
+encolamiento de manera automática, hay que hacer el CTRL + C y CTRL + V. ¿Cómo se hace ese CTRL + C y CTRL + V? de una manera muy 
+especial. Tenemos que tener al menos 2 componentes software, uno conocido como SOURCE CLIENT y otro conocido como PRODUCER. ¿En 
+qué consiste cada uno de ellos? El SOURCE CLIENT tiene como función hacer esta primera parte, conectarse a la fuente de datos y 
+empezar a jalar la data, digamos que es el CONTROL + C. El SOURCE CLIENT le pasa los datos que se han extraído de la fuente de 
+datos en tiempo real al PRODUCER y el PRODUCER tiene como objetivo empezar a escribirlos en el componente de encolamiento, digamos 
+que el PRODUCER hace el CTRL + V. Otro punto importante es que esta INGESTA PARALELIZADA tenemos que paralelizarla de alguna 
+manera, hablemos de Facebook nuevamente, supongamos que estamos ingestando datos de muchos personajes políticos en Facebook, de 
+Donald Trump, etc. Podríamos tener uno de estos componentes asignado a estar scrapeando la data de Donald Trump, otro que va a 
+estar scrapeando los datos de John Biden, otro la de Hillary Clinton y así, vamos a tener múltiples instancias que van a estar 
+ingestando los datos de la fuente de datos y escribiéndolos en la cola de peticiones, de hecho podríamos decir lo siguiente: 
+“…como Donald Trump es un personaje que genera mucha polémica, pues ahí vamos a asignarle 2 de estos ingestadores en tiempo real 
+(Un ingestador corresponde al trabajo de ambos Source Client | Producer) para distribuir la carga de comentarios entre 2 de ellos 
+y que todos escriban al ENCOLAMIENTO. Esta forma de ingestar los datos va a variar, por ejemplo, quién sería el SOURCE CLIENT si 
+estamos hablando de ingestar datos de Facebook, probablemente sea API Graph de Facebook, qué es el API oficial que tiene Facebook 
+para scrapear los datos. Si esto fuese Twitter, tendríamos que utilizar la herramienta software que Twitter te ofrece para hacer 
+esa ingesta. Así que el SOURCE CLIENT va a depender de lo que tú estés scrapeando en tiempo real y de hecho esta parte no es del 
+mundo Big data (Source --> Source Client) esta parte viene del especialista de la fuente de datos. Habrá un especialista que sepa 
+hacer extracción de datos en Facebook o de Twitter o de Geolocalización en celulares android o qué se yo, hay muchísimas fuentes 
+de datos en tiempo real. ¿Como se extrae la data de cada uno de ellos? va a depender. Esa parte generalmente no lo hace el 
+encargado de Big data. El encargado de Big data se encarga de todo el flujo desde Producer hasta Almacenamiento de baja latencia. 
+Una vez que ya se hizo el CTRL + C, ahora viene tomar esos registros que se han scrapeado y empezar a colocarlos en la cola de 
+peticiones por medio de la implementación del PRODUCER. De hecho, en la siguiente sesión cuando veamos todo el arquetipo completo, 
+vamos a ver que como desarrolladores Big data en el arquetipo, toda esta parte (Desde Producer hasta Almacenamiento de baja 
+latencia) es agnóstica a cuál es la fuente de datos y van a ver que dependiendo de cómo se vería la fuente de datos, vamos a hacer 
+unos cambios para poder integrar estos 2 componentes (Source Client y Producer) que siempre están de la mano. Pero vas a tener un 
+arquetipo que ya te va a automatizar toda esta parte de aquí. Implementaras el PRODUCER que ya envía los datos a la cola de 
+peticiones, luego que sigue, el CONSUMER que se encarga de extraer esos registros encolados como un pequeño archivo. Este pequeño 
+lote de archivos lo vamos a procesar en este componente, donde implementaremos las reglas de negocio. Ya sabemos que esas reglas 
+de negocio puede que requieran leer algunos datos de algunas tablas en tiempo real para enriquecer el procesamiento, hacemos lo 
+que tengamos que hacer y la resultante del procesamiento lo vamos a guardar nuevamente en tiempo real en una tabla (ALMACENAMIENTO 
+DE BAJA LATENCIA). Un punto importante de entender aquí es que cuando hablamos de tecnologías que almacenan datos en tiempo real, 
+en la jerga técnica al almacenamiento en tiempo real se le conoce como ALMACENAMIENTO DE BAJA LATENCIA. Aunque podemos llamarle 
+como queramos, el estándar según el patrón que estamos viendo, formalmente es ALMACENAMIENTO DE BAJA LATENCIA, pero Baja latencia 
+significa tiempo real. Este es el patrón base.
+
+
+Arquitectura aplicada: Scrapping de Facebook
+--------------------------------------------
+
+Acá por ejemplo, podríamos dependiendo de qué es lo que queremos ofrecer, poner las tecnologías. Como decíamos, si el SOURCE fuese 
+Facebook,  el SOURCE CLIENT extrae los datos de las páginas de Facebook, tendría que ser el API oficial de Facebook. Luego, 
+podríamos hacer un PRODUCER con PYTHON, que vaya escribiendo los datos en la cola de petición. La cola de peticiones ya sabemos que 
+va a estar en una infraestructura sobre KAFKA. El CONSUMER lo podemos escribir en PYTHON, en R, en JAVA o en nuestro lenguaje de 
+programación favorito. Recordemos que esto va a estar en SPARK STREAMING, vamos a usar PYTHON para implementar a SPARK STREAMING. 
+En el PROCESAMIENTO también lo vamos a hacer con SPARK STREAMING y la parte del ALMACENAMIENTO vamos a utilizar HBASE para almacenar 
+la data. Eso para un scraping de Facebook.
+
+
+Arquitectura aplicada: Geolocalización móvil
+--------------------------------------------
+
+Ahora digamos que estamos haciendo una geolocalización móvil, capturando los XY de varios celulares como si fuesen un UBER o un 
+WAZE, que envía constantemente el XY de cada celular para saber dónde está el automóvil. El patrón es el mismo, no va a cambiar, 
+como patrón de arquetipo de arquitectura, va a ser el mismo. El SOURCE CLIENT probablemente sea una APLICACIÓN ANDROID que va 
+sacando los XY del celular y un PRODUCER que lo puedes implementar en tu lenguaje de programación favorito, podría estar hecho en 
+JAVA, desde ahí se envía a la cola de peticiones. Luego, habrá un CONSUMER que tenga que extraer esas peticiones, igual las vamos 
+a procesar en tiempo real. Utiizamos HBASE para enriquecer los datos en tiempo real y con HBASE también guardamos la data en tiempo 
+real. ¿Qué es lo importante? Si te das cuenta el patrón visto en el punto “Arquitectura base para un proceso micro-batch como Real 
+Time” ya nos resuelve todos esos problemas. 

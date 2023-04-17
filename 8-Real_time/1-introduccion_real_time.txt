@@ -1,0 +1,282 @@
+INTRODUCCION A REAL TIME
+========================
+
+Hay algunos conceptos que tenemos que entender, en primer lugar, cuando hablamos de procesamiento en BATCH, es 
+sobre un Data lake desde la ingesta hasta la explotación del dato, construir un flujo de datos con ciertas reglas 
+que hemos estado siguiendo. Al hablar de procesamiento en tiempo real, el flujo desde el punto de vista de la 
+arquitectura va a ser el mismo no va a variar, hay que ingestar la data, almacenarla, procesarla y explotarla, va 
+a seguir el mismo flujo. Sin embargo, hay una serie de reglas que vamos a tener que respetar para hacer este tipo 
+de procesamiento:
+
+1.- Hay que entender un concepto muy particular que está relacionado al tiempo real, STORM DATA. ¿Qué es esto del 
+Storm Data? para poder entenderlo imaginemos una lluvia que puede estar cayendo sobre la ciudad. Cada gota de esta 
+lluvia, obviamente, es pequeñísima no pasa nada, pero el problema es que en conjunto hay muchísimas de estas gotas 
+que cada segundo van a estar lloviendo por encima de la ciudad y, por lo tanto, puede haber una inundación, es 
+demasiada agua que está cayendo. El concepto de “Storm data” es muy similar a esto, vamos a tener peticiones que 
+pesan poquísimo, generalmente menos de un kilobyte, puede empezar megabyte, pero lo normal es menos de un kilobyte. 
+Pero no vamos a tener una de estas peticiones, si no, que vamos a tener cientos de miles de peticiones por segundo, 
+el ejemplo que todos podemos entender los comentarios sobre Facebook. En Facebook, obviamente, las personas van a 
+estar comentando, cada comentario si copiásemos el contenido y guardaramos en un archivo y verificamos el peso sería 
+pequeño y no pesaría mucho, el problema va a ser que va a haber muchísima gente comentando en Facebook y van a haber 
+cientos de miles de peticiones de comentarios por segundo, que en su conjunto van a poder llegar a pesar muchísimo, 
+aunque por separado cada una pesa diferente. ¿Por qué es importante este concepto? porque es la base para el 
+procesamiento en tiempo real, una cosa es tener un archivo que pese 60 GB y ya sabemos cómo se procesa, hay toda una 
+serie de reglas que tenemos que respetar si es un procesamiento en Batch y otra cosa completamente diferente es tener 
+cientos de miles de peticiones que en su conjunto pesen 60 GB, ahí vamos a tener que aplicar otras técnicas de 
+procesamiento, es completamente diferente. Si tenemos datos que cumplan las reglas del Storm data, vamos a tener que 
+hacer un procesamiento basado en patrones de tiempo real, ya no vamos a poder aplicar ninguna de las técnicas que 
+vimos hasta la sesión anterior, ya que, todo eso está orientado al Batch. Hay un gran problema en el procesamiento 
+de tiempo real, vamos a pintarlo de manera general primero. Ya sabemos que van a llover muchísimas peticiones, ya que, 
+cuando teníamos un flujo Batch ¿qué pasaba? dentro del Cluster están los servidores y ya sabemos que sobre la CPU de 
+los servidores es donde se realiza el procesamiento, si tuviéramos un flujo en Batch podemos paralelizar ese flujo 
+haciendo uso de varias CPU por medio de tunning, por ejemplo, separamos ,no sé, 8 CPUs, hay garantía que cada CPU va 
+a procesar una parte del flujo. ¿Qué es lo que va a pasar con el Storm data? lo siguiente, no va a venir solamente un 
+hilo de información que vamos a querer paralelizar, si no, que van a venir de manera desordenada cientos de miles de 
+hilos de peticiones que van a pelear por la CPUs, para que se pueda conseguir seguir cumpliendo la paralelización del 
+procesamiento, cada CPU solamente puede atender una petición, así que ¿qué es lo que pasa bajo estos escenarios de Storm 
+data? así como una ciudad puede llegar a inundarse, un Clúster puede llegar a colapsar, porque tienen cientos de miles 
+de peticiones que están compitiendo por uso de CPU y este Clúster, obviamente, no va a tener cientos de miles de CPUs, 
+probablemente va a tener cientos o quizá miles, pero no cientos de miles, así que ahí vamos a caer en un anti-patrón 
+conocido como la MONOPOLIZACION DE REAL TIME. ¿Qué es esto de las monopolización de Real time? que un proceso en tiempo 
+real, si no está con algún patrón de captura de datos, puede llegar a usar el 100% de la CPU de todo el Cluster y ¿por 
+qué esto es impráctico? porque ya sabemos que en un Clúster van a correr otros procesos, por ejemplo, otros batches que 
+hemos hecho hasta ahora u otros procesos de tiempo real. Si solamente un proceso está haciendo uso de toda la potencia 
+del Cluster, el resto de procesos no se va a ejecutar. 
+
+En la vida real qué es lo que vemos, hacen pruebas de tiempo real con poquísimos registros y al momento de pasar a un 
+entorno productivo el Cluster colapsa. Por tanto, ni su proceso ni los otros procesos llegan a ejecutarse de manera 
+correcta. Entonces, ¿cómo hacer procesamiento de tiempo real de manera eficiente? hay un patrón de procesamiento conocido 
+como MICRO-BATCH. ¿En qué consiste este patrón? ya sabemos que el problema es que en nuestro Cluster, en donde vamos a 
+procesar, si mandamos todo el Storm Data, es probable que colapse, que monopolicemos el 100% de nuestros servidores. 
+¿Qué te dice el patrón de Micro-Batch? te dice, “…no vamos a mandar todas las peticiones directamente al Cluster, si no, 
+que vamos a tener una infraestructura que va a estar dedicada exclusivamente para soportar el Storm data, esta tormenta 
+de datos. Esta infraestructura lo único que va a hacer es ENCOLAR estas peticiones, va a crear una especie de cola de 
+peticiones y las va a poner en orden, una tras otra. El desarrollador le va a tener que indicar lo siguiente, “…mira 
+quiero que en coles todas las peticiones que lluevan durante 1 segundo…” probablemente sea, no sé pues, en un caso típico 
+de Facebook si estamos scrappeando data podrían ser hasta 100000 peticiones por segundo, si estamos scrappeando cientos 
+de miles de páginas de comentarios en Facebook, en ese segundo se van a capturar, no sé, vamos a poner un número que es 
+normal en un tiempo real, 100000, tenemos 100000 transacciones capturadas en 1 segundo. Esta cola de peticiones que se va 
+a crear en una infraestructura separada, físicamente se va a almacenar no en el disco duro, si no, en la memoria RAM, 
+¿por qué? porque estamos ante un escenario de tiempo real, se acuerdan que en la primera sesión, se comentó que hay algunas 
+herramientas completamente “in-memory” de almacenamiento de datos. Vamos a usar una tecnología de este tipo para soportar 
+esta tormenta de datos en tiempo real y escribir lo más rápido que se pueda la data para que esté encolada una tras otra 
+en orden. 100000 transacciones de 1 KB cada una, podría llegar a pesar tranquilamente no mucho, muy probablemente alrededor 
+de 100 MB, porque, solamente estamos capturando de un segundo. Si lo pusiéramos por 100 segundos, ahí ya sería para un 
+tiempo real un poquito grande, pero como no queremos hacer un procesamiento cada 10 segundos o cada 20 segundos, estos son 
+números que se manejan, vamos a encolarlo durante 1 segundo, solo durante 1 segundo. ¿Cuál es el siguiente paso? una vez 
+que se han encolado, vamos a mandar todas las peticiones encoladas a que sean procesadas ya en el Cluster principal, como 
+ya las tenemos encolada, las vamos a colocar en una especie de pequeño archivo, que va a tener estas 100000 transacciones 
+que fueron capturadas durante 1 segundo. Si en la RAM eso pesaba 100 MB, obviamente, el pequeño archivito que se va a crear, 
+más o menos, va a pesar también 100 MB. Nosotros sabemos que para un Clúster de Big data 100 MB no es nada, incluso aunque 
+esto sea 1 GB no es nada, lo va a poder procesar, de hecho, lo va a procesar muy rápido. Hemos visto que para los ejemplos 
+que hemos estado trabajando, hemos estado trabajando, más o menos, con 1/4 de millón de transacciones o medio millón de 
+transacciones y el Cluster lo ha podido hacer en un par de segundos, así que el tamaño de archivos de este tipo, con esta 
+cantidad de transacciones para un Cluster de Big data no es nada. ¿Cuál es la ventaja de esto? que si aplicamos esta técnica 
+de tener una infraestructura especial que va encolar las peticiones durante determinado tiempo, el siguiente paso es que 
+esta infraestructura le va a entregar a la infraestructura de procesamiento que es la que hemos estado usando nosotros para 
+las clases, un archivo y cuál es la buena noticia que puedes aplicar cualquier técnica de procesamiento batchero que 
+conozcamos sobre este pequeño archivo, que como es pequeño recibe el nombre de MICRO-BATCH. Es un micro-batch, lo que vamos 
+a hacer, procesar un archivo pequeñito. Por ejemplo, supongamos que solo asignamos un container para que sea procesado y 
+digamos que con un container lo está haciendo bien en 10 segundos, eso es muy rápido, pero para un tiempo real es demasiado, 
+tenemos 1 segundo de encolamiento y 10 segundos de procesamiento. Así que vamos a llevarlo al siguiente escenario, creamos 
+10 container que sería partir el archivo en 10 partes, para que se distribuya en 10 container diferentes y más o menos se va 
+a reducir el tiempo a 1 segundo, 1 segundo de encolamiento + 1 segundo de procesamiento serían 2 segundos, así que este end 
+to end que estamos implementando tomará 2 segundos. 
+
+
+                                INFRAESTRUCTURA                                               
+                                INTERMEDIA EXCLUSIVA                                                        
+    FUENTE                      PARA SOPORTAR STORM DATA                                CLUSTER DE PROCESAMIENTO
+ ____________                    ________________                MICRO-BATCH                 ________________
+|            |                  |  __   __   __  |                  ______                  |  __   __   __  |    
+|            |                  | |__| |__| |__| |                 | ---- |                 | |__| |__| |__| | 
+|            | ---------------> |  __   __   __  | --------------> | ---- | --------------> |  __   __   __  |
+|            |                  | |__| |__| |__| |                 |______|                 | |__| |__| |__| | 
+|____________|                  |________________|                                          |________________|
+
+
+Esta es la ventaja de utilizar el patrón MICRO-BATCH para implementar procesos de tiempo real. La infraestructura que va a 
+estar dedicada exclusivamente para soportar el Storm data nos va a facilitar ordenar los datos, porque la otra opción es 
+mandar todo el Storm data directamente al Cluster y ya hemos visto que eso va a hacer que se colapse el Cluster en algún 
+momento, así que montamos una infraestructura intermedia para soportar el Storm data, encolamos la data en la memoria RAM y 
+luego le decimos cada cuanto va ir pasándole los datos para ser procesados en el Clúster de procesamiento. Como ya lo tenemos 
+en un pequeño archivito todas las técnicas que hemos aprendido hasta la sesión anterior y si el día de mañana salen nuevas 
+técnicas de procesamiento batch, las vamos a poder seguir aplicando para estos escenarios de tiempo real, digamos que no se 
+mañana aprendes una nueva técnica en batch, bueno si quieres aplicar la misma pero en tiempo real, aplicas el patrón de 
+micro-batch y esa técnica nueva que has aprendido la vas a poder seguir aplicando, porque al final vas a tener un archivo 
+batchero pequeñito. 
+
+Esta es la gran ventaja del MICRO-BATCH: 
+
+1.- Ya no vamos a colapsar la infraestructura
+2.- Vamos a poder seguir aplicando todas las técnicas de programación basadas  en BATCH. 
+
+Obviamente hay que seguir unos lineamientos, pero van a ver que en esencia este es el truco y una vez que lo tengas como un 
+pequeño archivito, ya lo vas a procesar como siempre lo has estado procesando. El otro punto es que esto también pasa 
+constantemente, (utilizar 1 container y que demore 10 segundos) generalmente cuando uno está el tiempo real para probar, 
+¿qué es lo que hace? retiene durante 1 segundo la data y luego prueba con algunos containers y más o menos nos saldrá 5 
+segundos, 10 segundos, 20 segundos y como le puedes aplicar todas las técnicas de batch que conocemos, multiplicamos en 
+función de qué tan rápido quieres que vaya tu proceso para que se paralelice lo que estemos implementando. Lo de toda la 
+vida que hemos visto hasta el momento en Batch, la paralización de tu proceso. 
+
+
+¿Cómo montar todo esto? 
+-----------------------
+
+realmente no es difícil, no es difícil van a ver que los comandos son muy simples y una vez que ya 
+también tengamos bien capturada la data, va a ser fácil, ya vamos a poder aplicar todas las técnicas que conocemos. 
+
+
+¿En qué va a consistir un procesamiento en tiempo real? 
+-------------------------------------------------------
+
+Vamos a tener una fuente de datos en tiempo real que va a estar lanzando muchas transacciones del tipo Storm data, ejemplos 
+de fuentes de datos en tiempo real, ya mencionamos uno, Facebook, pero esto lo podrías aplicar, por ejemplo, en el caso de 
+Uber, cuando tú pides un Uber el movimiento del taxi se va actualizando cada 2 segundos o cada 3 segundos, eso es porque 
+están haciendo un micro-batch, o por ejemplo, si estás movilizándote dentro de la ciudad desde un punto A a un punto B y 
+estas utilizando Waze, misma historia, hay una especie de latencia de 2 a 3 segundos, es porque realmente las grandes 
+empresas si quieren hacer real time tendrían 2 opciones o se compran infraestructuras multimillonarias, que les va a salir 
+costosisimas para realmente atender cada petición ni bien se genere, o ponen esta infraestructura intermedia que se va a 
+especializar en encolar todo lo que llueva del Storm Data, por 1 o 2 segundos. Obviamente, se escogerá la segunda opción, 
+porque saldrá muchísimo más barato. ¿Cuál va a ser el problema? la latencia adicional que generalmente es de 1 o 2 segundos, 
+porque, si realmente hiciéramos un procesamiento en tiempo real ni bien aterrice la data, el procesamiento estaría en 
+microsegundos, sería extremadamente rápido, pero para efectos empresariales entre un micro segundo y 1 segundo para el 
+usuario no hay diferencia, sin embargo, a nivel de infraestructura nos vamos a ahorrar muchísimo dinero, de hecho, sería 
+impráctico hacer totalmente todo en tiempo real. 
+
+
+¿Cuándo se hacen procesamientos de tiempo en el orden de microsegundos?
+-----------------------------------------------------------------------
+
+Solo seria una justificación muy buena, un ejemplo, el gran colisionador hadrones. Para poner un ejemplo muy particular, ya 
+saben que en Europa hay una gran maquinaria que básicamente choca 2 partículas subatómicas a velocidades cercanas a la luz 
+y entre ellos rompen el espacio tiempo e incluso se puede llegar a crear materia y tienen que tener unos sensores que en 
+tiempo real estén monitoreando todo esto, porque, finalmente esa información generada solamente vive ni siquiera en 
+microsegundos, si no, nanosegundos, e inclusive más pequeños. Ahí se justificaría utilizar REAL-TIME, pero en una empresa en 
+donde, vamos a crear una aplicación móvil que en función de XY que el usuario va enviando cada segundo, si está cerca de una 
+tienda le enviamos una promoción, ahí no es que un microsegundo o un nanosegundo hagan la diferencia respecto a un segundo, 
+ahí puede entrar un micro-batch tranquilamente. Ahora si tú cliente te dice yo sí lo necesito en microsegundos, porque yo sí 
+noto la diferencia entre 1 segundo y 1 microsegundo, ahi no hay de otra, tendrías que montar una súper infraestructura dedicada 
+solamente a procesos de verdadero Real-time y les adelanto que con una empresa no pasa eso, así que no deberíamos preocuparnos 
+realmente por un procesamiento en tiempo real puro. El MICRO-BATCH nos va a bastar. 
+
+
+Una vez que se ha encolado la data durante 1 o 2 segundos en la memoria RAM de esta nueva infraestructura, el siguiente paso 
+es hacer algo con esos datos. Para esto vamos a tener que en el Clúster de procesamiento construir una pieza de software 
+especial llamada CONSUMER. ¿Cuál va a ser el objetivo del CONSUMER? ya sabemos que en nuestra cola tenemos todas las 
+transacciones que lluevan durante 1 segundo. El Consumer tiene como objetivo consultar esas transacciones y crear el pequeño 
+archivo de datos que se explicó anteriormente. Una vez que el CONSUMER, ya colocó en el Clúster este pequeño archivo de datos, 
+vamos a tener que programar otra pieza de software que va a ser el proceso, lo que nosotros queremos hacer. ¿Este proceso que 
+necesita? este proceso digamos que lo que estamos capturando son transacciones de tarjetas de crédito, lo que conocemos, 
+tenemos el ID de la persona, el ID de la empresa en donde se realizó la transacción y el monto de transacción, supongamos que 
+queremos hacer un proceso de enriquecimiento de datos, algo que todo el mundo puede conocer, a la transacción queremos 
+agregarle el nombre de la persona y el nombre de la empresa en donde se realizó la transacción. Este procesamiento va a tener 
+que de alguna manera consultar a una base de datos y le va a decir: “…oye en la tabla persona tengo este ID para el primer 
+registro, dime cuál es el nombre. Para el primer registro tengo el ID de la empresa y en función del ID de la empresa dame su 
+nombre…”. Vamos a hacer una consulta y esta consulta va a ser en tiempo real. HIVE no es una herramienta para procesamientos 
+REAL-TIME, así que vamos a tener que usar otro tipo de herramienta que nos va a permitir hacer consultas en tiempo real. Digamos 
+que al vuelo se consulta para todos los registros, y esta consulta generalmente dura menos de un segundo y luego hacemos algo con 
+los datos, ese algo podría ser en una tabla guardar la transacción enriquecida con los campos que hemos agregado. Una vez que 
+hemos guardado los datos en una tablita, nosotros podemos tener una herramienta de visualización que cada segundo va actualizando 
+la data en tiempo real en función de lo que se va guardando en esta tablita resultante de nuestro proceso, de esa manera 
+estaríamos haciendo un end to end completo, de un procesamiento en tiempo real. Un componente de encolamiento que soporta la 
+data por 1 segundo, un consumer que se encarga de extraer esos datos y colocarlos en un archivito, un módulo de procesamiento 
+que hace algo con esta data, ese algo con esta data puede ser vamos a enriquecer en tiempo real con más campos los registros que 
+vamos capturando, procesamos lo que tengamos que procesar y la resultante la guardamos en una tabla también en tiempo real. 
+Generalmente los tiempos son 1 segundo para capturar, 1 segundo para hacer todo este flujo, desde la creación del pequeño archivito 
+hasta la consulta en tiempo real la base de datos y enriquecimiento de registros y 1 segundo adicional para bajar la data 
+resultante, no se pues, los 100000 registros que hemos procesado al Disco duro y luego ya con tu herramienta de visualización de 
+tiempo real podrás ver cómo en tiempo real tus resultados van variando, porque los estas capturando en tiempo real. 
+
+
+¿Cuáles son los puntos que podemos optimizar como desarrollador? 
+----------------------------------------------------------------
+
+Vamos a poder optimizar el encolamiento y el flujo de procesamiento. El que es muy difícil de optimizar es este de aquí porque 
+implica disco duro, bajada de la resultante al disco duro para que, por ejemplo, luego visualizarlo en alguna herramienta. Esa 
+es la parte difícil de optimización, así que se recomienda que los cuellos de botella siempre los manejen por aquí, en el que 
+encola los datos o en el flujo de procesamiento.
+
+
+¿Cómo se optimiza el encolamiento?
+---------------------------------- 
+
+Pues tan simple como decirle: “…oye ya no quiero que encoles por 1 segundo la data, ahora quiero que encoles cada 0.5 segundos…”. 
+
+
+¿Cómo se tunea los tiempos en el flujo de procesamiento? 
+--------------------------------------------------------
+
+Como aquí ya podemos aplicar todas las técnicas de batch, porque estamos dentro del patron de micro-batch, puedes aplicar 
+cualquier técnica de tunning batchero. La clásica, digamos que con 3 container se está demorando justo 1 segundo y tú quieres 
+que vaya a 0.5 segundos, pues simplemente duplicamos el número de container, 6 containers, por tanto, tendríamos 0.5 segundos 
+en el encolamiento y  0.5 en el flujo de procesamiento y ambos sumarían 1 segundo y esto de lo que es muy difícil escaparse, 
+porque es bajada disco duro, 1 segundo, entonces 1 segundo + 1 segundo son 2 segundos, tiempo real y tu usuario probablemente va 
+a estar feliz con ese tiempo de procesamiento. ¿Se puede bajar más? claro que sí, tendrías que bajar más el tiempo de encolamiento 
+o aumentar el número de containers que procesan en paralelo tus procesos. Ya va a depender de por dónde quieras jugar al momento 
+de tunear. 
+
+Ahora que hemos entendido de manera general todo esto, vamos a definir el nombre de algunas herramientas que te van a permitir 
+hacer estos flujos en tiempo real. Vamos a practicarlo con 3 herramientas, lo que importa no es en si la herramienta, sino 
+entender cómo implementar el patrón con al menos algunas herramientas. Si puedes implementarla con las herramientas que vamos a 
+ver el día de hoy, si mañana en lugar de Azure quieres usar Cassandra, el patrón es el mismo, los comandos serán diferentes, pero 
+lo que importa es ver cómo implementar este patrón. Vamos a poner un nombre sobre toda esta arquitectura visual. La fuente de 
+datos la vamos a emular en tiempo real y luego vamos a hacer un switch a una fuente de datos ya realmente de tiempo real, así que 
+por ahora no va a importar tanto esa fuente. Esta infraestructura que va a capturar la data, que nos va a permitir crear una cola 
+de peticiones en memoria RAM se llama KAFKA. Es una herramienta de encolamiento de datos para tiempo real. ¿Existen otras 
+alternativas? Claro, por ejemplo, si estuviéramos en nube, AZURE tiene EVENT HUB, hay muchísimas otras herramientas, pero KAFKA es 
+la estándar. De hecho, las herramientas en cloud que también te permiten hacer encolamientos, te ofrecen la interfaz KAFKA por si 
+quieres usarla, pero con los mismos comandos de Kafka, por lo tanto, vas a poder manejar muchas herramientas. Bien, ya tenemos la 
+herramienta con que encolar, ya sabemos que Kafka va a tener que estar en una infraestructura dedicada, no puede estar en la misma 
+infraestructura del Clúster de procesamiento. Recordemos que vamos a estar separando memoria RAM. Supongamos que tenemos varias 
+fuentes de datos en tiempo real, tendremos que separar una zona de memoria RAM para cada fuente de datos y ya sabemos que los 
+procesos en tiempo real son permanentes, ¿esto qué significa? por ejemplo, un comentario en Facebook lo puedes hacer a la 1:00 de 
+la tarde o a la 1:00 de la mañana, no es que Facebook te dice: “…vamos a habilitar los comentarios de tal hora hasta tal hora…”, 
+no, es algo permanente, así que esta zona de memoria RAM, va a estar ocupada de manera permanente, durante el tiempo que 
+configuremos. Que se va a ir liberando cada segundo, por supuesto, pero en ese segundo van a seguir lloviendo los datos. Es un 
+Clúster que se ocupa de manera permanente en la RAM, por eso no podemos mezclarlo con el de procesamiento, porque, haría que la 
+RAM de procesamiento se mezcle con esta RAM permanente de encolamiento de datos. 
+
+
+                                INFRAESTRUCTURA                                               
+                                INTERMEDIA EXCLUSIVA                                                        
+    FUENTE                      PARA SOPORTAR STORM DATA         CLUSTER DE PROCESAMIENTO
+ ____________                    ________________                    ______________________________________________________________
+|            |                  |  _____________  |                 |  __________         ____          _______        __________  | 
+|            |                  | |_|_|_|_|_|_|_| |                 | |          |       |----|        |       |      |   Base   | |  
+|            | ---------------> |  _____________  | --------------> | | Consumer |-----> |____| -----> |   ⬤   ----->   de datos     
+|            |                  | |_|_|_|_|_|_|_| |                 | |__________|     Micro Batch     |_______|      |__________| | 
+|____________|                  |_________________|                 |_______|______________________________|________________|______|
+                                         |                                  |______________________________|                |   
+                                         ˅                                                  |                               |
+                                       KAFKA                                                ˅                               ˅     
+                                                                                      SPARK STREAMING                     HBASE   
+                                                                                         (o STORM)                     (o CASSANDRA)
+
+Luego ya sabemos que vamos a tener nuestro Clúster de procesamiento, el CONSUMER que se va a encargar de conectarse a la cola y 
+entregar un pequeño archivo MICRO-BATCH, lo vamos a hacer con SPARK STREAMING. Spark Streaming es el módulo que habilita el 
+procesamiento micro-batch sobre Spark. Básicamente, vas a poder seguir programando en el Spark que hemos visto hasta el momento, 
+pero orientado a tiempo real, hay una serie de reglas que vamos a tener que seguir por supuesto, pero de ahí una vez que captures 
+la data y la tengamos en el archivo que entrega el Consumer, la puedes programar como siempre. Luego de eso vamos a implementar 
+el proceso propiamente dicho, eso también lo vamos a hacer con Spark Streaming, las reglas de negocio las vamos a implementar con 
+Spark Streaming.                                        
+
+Luego vamos a necesitar una base de datos en tiempo real para poder lanzarle consultas a las tablas, no sé pues, tengo el ID de 
+la persona dame el nombre de la persona, tengo el ID de la empresa dame el nombre de la empresa. Si tenemos 100000 transacciones 
+en tiempo real vamos a tener que hacer estas 100000 consultas en disco duro y las resultantes en tiempo real las tenemos que 
+guardar en otra tabla en la misma base de datos. Todo esto lo vamos a implementar con una tecnología llamada HBASE, que nos va a 
+permitir habilitar almacenamiento en tiempo real sobre disco duro. 
+
+Por supuesto, lo que nos va a importar es la implementación del patrón, porque quizá el día de mañana entras a otro proyecto y 
+te dicen que utilizan CASSANDRA (en vez de HBASE) y de hecho pero muchas de las interfaces en nubes te ofrecen una interfaz 
+basada en HBASE, ya que, también es un estándar sobre el ecosistema Hadoop, porque al final lo que importa más que los comandos 
+son la forma en cómo se implementa el patrón. La misma historia en vez de usar SPARK STREAMING usamos STORM, que es otra 
+herramienta para programación en tiempo real. La sintaxis cambiará, pero las reglas de patrón son las mismas. Y finalmente para 
+hacer una consulta de datos en tiempo real ya muchos de las herramientas de visualización tienen conectores para tablas de tiempo 
+real, pero nosotros vamos a seguir usando HUE, ¿cómo lo vamos a usar? esto se va a aplicar para cualquier técnica de visualización, 
+básicamente la tabla que se esté actualizando en tiempo real, en este caso con HBASE, por encima vamos a crearle una fachada en 
+HIVE, así como hemos creado sobre archivos estructurados una tabla en HIVE para poder manejarlo fácilmente, misma historia, sobre 
+estas tablas de tiempo real por encima les vamos a crear una fachada en HIVE, para que las herramientas de visualización ni ellas 
+se van a dar cuenta que por detrás hay una herramienta de tiempo real, ellos van a seguir viendo una tabla en HIVE. Y ¿esta 
+conexión cómo se va a hacer? ya sabemos que las herramientas de visualización tienen que usar conectores basados en IMPALA para 
+poder extraer los datos y visualizarlos. 

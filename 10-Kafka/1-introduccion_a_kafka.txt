@@ -1,0 +1,142 @@
+INTRODUCCION A KAFKA
+====================
+
+Con HBase vamos a almacenar ya los datos de manera permanente en tiempo real. Pero necesitamos
+definir esta herramienta que se va a encargar de encolar en memoria RAM las transacciones, y 
+de hecho, las herramientas de encolamiento son la clave para el procesamiento en tiempo real
+hay que aprenderlas a usar muy bien, porque, si fallamos en el encolamiento el Clúster de
+procesamiento no va a poder procesar con la escalabilidad esperada. Quizás lo esencial en Kafka
+es decir que requiere de una INFRAESTRUCTURA DEDICADA, no va a ser la misma infraestructura de
+nuestros Clúster de los Gateway, Master y Slave. Debe ser una infraestructura completamente
+diferente. Ya sabemos el por qué, Kafka al estar orientado a encolar registros en tiempo real
+va a requerir de una memoria RAM reservada de manera permanente. Si estuviera en el Clúster, le
+estaría restando esa RAM de manera permanente a la infraestructura. Así que es mejor por temas
+de gobierno tenerlos en Cluster diferentes.  
+
+
+Concepto
+--------
+
+Es una plataforma para la construcción de pipelines de datos en tiempo real. Ya sabemos que
+básicamente vamos a soportar el concepto de Storm data en un componente que nos va a regresar 
+todo lo capturado en un pequeño archivito conocido como MICRO-BATCH. Esta plataforma implementa
+el patrón conocido como "PUBLICADOR/SUSCRIPTOR". ¿Esto que significa? hay un componente llamado
+'Publicador' que envía mensajes y hay un componente llamado 'Suscriptor' que extrae los mensajes
+y los procesa. En el caso de Kafka, al 'Publicador' se le conoce como "PRODUCER" y al 'Suscriptor'
+se le conoce como "CONSUMER". Ya sabemos que el PRODUCER es quien escribe los datos en el
+componente de encolamiento y el CONSUMER es quien extrae esos registros en forma de un pequeño
+archivito. También es importante saber que el PRODUCER no extrae los datos de la fuente de datos
+en tiempo real, recordemos que esa es otra pieza de software llamado 'Source Client', es quién se 
+conecta la fuente de datos y hace el CTRL + C, copia lo que hay en la fuente de datos, se lo pasa 
+el PRODUCER y el PRODUCER hace el CTRL + V. Kafka es altamente escalable y paralelizable, esto es 
+porque funciona sobre un Clúster, de hecho, el recurso computacional importante de Kafka es solamente 
+la memoria RAM, no la CPU, porque Kafka no va a procesar nada, solamente almacena de manera temporal. 
+Existen componentes como Kafka streaming que te permiten procesar en el mismo Clúster que Kafka, pero 
+no se recomienda, para no mezclar la tarea de procesamiento con la tarea de captura de datos, es mejor 
+siempre tenerlo en Clúster separados. También, por supuesto, supongamos que tenemos un Clúster Kafka 
+que tiene 100 GB de memoria RAM y con eso podemos atender, digamos, 100 procesos, porque cada proceso 
+consume de manera permanente 1 GB de RAM. ¿Qué pasa si queremos aumentar más procesos? pues el Clúster 
+ya está saturado, así que tocaría comprar más servidores y es como si dinámicamente creciese la memoria 
+RAM del Clúster y tenemos simplemente más RAM para colocar más procesos. Y por supuesto también es 
+altamente tolerante a fallos, vamos a explicar en un momento si cae un servidor y ese servidor tiene 
+datos en la memoria RAM, ¿los datos se pierden? no, porque Kafka también tiene redundancia sobre memoria 
+RAM, la data se va a escribir siempre en la RAM de 2 servidores diferentes, si uno colapsa tenemos la 
+copia en la RAM en otro servidor y por supuesto tú como desarrollador ya te despreocupas de todo eso, 
+pues simplemente creas tu componente de encolamiento sobre Kafka.
+
+
+Objetivo fundamental
+--------------------
+
+1. Almacenar con baja latencia datos de manera temporal
+
+2. Distribuir los datos a uno o varios sistemas
+
+
+El objetivo fundamental que tiene Kafka es almacenar los datos con baja latencia o sea muy rápido, 
+soportar la tormenta de datos, pero solamente de manera temporal. ¿Por qué almacenan los datos de manera 
+temporal? hay 2 consideraciones que tienen que saber, se había puesto este ejemplo, aquí tenemos el 
+componente de encolamiento y los registros se van a ir escribiendo, el PRODUCER los va a ir escribiendo y 
+el CONSUMER los va a ir extrayendo en forma de un pequeño lote para procesar. Una cosa es el tiempo de 
+extracción del CONSUMER, podrías tener varios CONSUMER para diferentes proyectos, que apunten a un mismo 
+componente de encolamiento, por ejemplo, el CONSUMER 1 para su necesidad de negocio necesita extraer la 
+data cada segundo, el CONSUMER 2 cada 10 segundos y el CONSUMER 3 cada 3 segundos. Pueden haber diferentes 
+tiempos de extracción para diferentes CONSUMER, pero una cosa es el tiempo de extracción que define cada 
+CONSUMER y otra cosa es el tiempo de vida de los datos en el TÓPICO. El componente de encolamiento también 
+se le conoce como “Cola de peticiones”, como “Cola” o también como “Tópico”, así que puedes usarlo como 
+sinónimos. Dentro de este tópico que se están almacenando los registros, vamos a tener que definir un tiempo 
+de vida, por ejemplo, podríamos decir que los datos vivan en el tópico durante 1 hora, significa que sí un 
+registro aterrizó a las 5:00 de la tarde, a las 6:00 de la tarde ese registro se va a borrar. Si hay un 
+registro que aterrizó a las 5:30 de la tarde, como todo vive 1 hora, a las 6:30 de la tarde se va a borrar. 
+¿Por qué es importante entender que hay un tiempo de extracción del CONSUMER, con un tiempo de vida de los 
+registros? porque podría pasar lo siguiente, vamos a darle mantenimiento al CONSUMER 1 de nuestro proyecto 1 
+que extrae los datos cada 10 segundos, lo vamos a detener por un momento, vamos a detenerlo por 10 min, 
+luego de 10 minutos lo volvemos a activar y vamos a seguir extrayendo los datos cada 10 segundos, pero podría 
+darse el caso que decimos vamos a detenerlo por un día completo, ¿qué va a pasar en ese caso? en la memoria 
+RAM de Kafka, los registros los hemos configurado para que vivan 1 hora, significa que si algún CONSUMER no 
+lanza una petición de: “…oye dame los registros que se han acumulado durante esa hora…” ya nunca los va a 
+poder acceder, porque se van a liberar de la memoria RAM del Clúster Kafka. Otro ejemplo, supongamos que tú 
+configuras un CONSUMER que extraiga la data cada 2 horas, como la data vive solo por 1 hora, obviamente este 
+CONSUMER nunca va a extraer nada porque lo hace cada 2 horas y los datos en el tópico solamente viven 1 hora. 
+Es importante diferenciar estos 2 tiempos, el tiempo de vida de los registros dentro del tópico y el tiempo 
+de extracción que va a definir cada CONSUMER para extraer la data y por supuesto, el tiempo de extracción 
+tiene que ser menor al tiempo de vida, porque si no nunca se va a enterar tu CONSUMER de esos datos. Por 
+estándar, se acostumbra a que el tiempo de vida de un tópico sea de 1 hora y es muy raro que se modifique 
+esto, porque los CONSUMERS generalmente van a estar en el rango de entre 1 segundo, 10 segundos, 30 segundos 
+o exagerando muchísimo, 10 minutos, es muy raro que haya un CONSUMER que extraiga los datos en forma de Batch 
+más allá de este límite. Así que el estándar en Kafka te dice hay que crear los tópicos para almacenar el 
+tiempo de vida por 1 hora. ¿Por qué se hace esto? porque siempre va a pasar algo, quizá haya un corte en la 
+red y todos los CONSUMERS se detengan y haya que reiniciar algunos servidores y los servidores no se van a 
+tomar 1 hora en reiniciarse, quizás 20 minutos o 30 minutos, y al reiniciarse seguimos consumiendo desde donde 
+nos quedamos, porque hay garantía que todo vivir por 1 hora. Es por esa razón que se coloca 1 hora en el tiempo 
+de vida. Y el otro punto importante es por motivos de sizing. 
+
+
+¿Cómo se hace un sizing de la infraestructura Kafka? 
+
+no es tan completo y supongamos que tenemos 3 fuentes de datos en tiempo real, tenemos que escribir cada segundo 
+cuántas transacciones van a venir, digamos que desde la Fuente de datos 1 vienen 10000 transacciones por segundo, 
+de la fuente de datos 2 vienen 100000 transacciones por segundo y de la fuente de datos 3 vienen 1000 transacciones 
+por segundo. Lo siguiente es definir cuánto pesa en promedio cada una de estas transacciones y siempre van a ser 
+números pequeñitos, vamos a poner que todos pesan 1 KB para simplificar el cálculo, entonces este es el peso de las 
+transacciones. ¿Cuál es el peso total por segundo? para la fuente de datos 1 serían 10000 transacciones por segundo 
+sobre 1 KB, que es 10 MB. De igual manera calculamos los demás.
+
+      | n° transac. en  1s   | Peso Transaccion | Peso Total x seg. |  
+______|______________________|__________________|___________________|
+      |                      |                  |                   |
+  F1  |         10000        |       1 kb       |       10 MB       |   
+  F2  |        100000        |       1 kb       |      100 MB       |
+  F3  |          1000        |       1 kb       |        1 MB       |
+______|______________________|__________________|___________________|
+
+Y, ¿cuál va a ser el tiempo y cuál va a ser la cantidad de RAM que se usarían para 1 hora? Para la fuente de datos 1, 
+si en cada segundo vienen 10 MB, en 1 hora sería 36000 MB o sea 36 GB. Para las demás fuentes de datos hacemos el mismo 
+cálculo. De esta manera, ya tendremos números para poder decidir. La fuente de datos 1 va a requerir una reserva de 
+360 MB para poder almacenar la data por 1 hora, la fuente de datos 2 de 36 MB y la fuente de datos 3 de 3.6 MB cada hora. 
+
+      | n° transac. en  1s   | Peso Transaccion | Peso Total x seg. |      RAM x 1h      |  
+______|______________________|__________________|___________________|____________________|
+      |                      |                  |                   |                    |   
+  F1  |         10000        |       1 kb       |       10 MB       |  36000 MB o 36 GB  |
+  F2  |        100000        |       1 kb       |      100 MB       | 360000 MB o 360 GB |
+  F3  |          1000        |       1 kb       |        1 MB       |   3600 MB o 3.6 GB |   
+______|______________________|__________________|___________________|____________________|
+
+Como los tópicos están configurados por 1 hora, hay garantía de que cada hora se van a ir liberando los registros antiguos, 
+pero de manera permanente ya tenemos estos esta memoria RAM reservada para cada uno de nuestros procesos. ¿Cuánto sumaría 
+para estos procesos? pues realmente no sale mucho, pongamos un número fácil de manejar, digamos que sale 5 GB. Es normal 
+que los Clusters Kafka no sean tan potentes, no tienen muchos servidores porque tampoco es necesario que se requiera muchísima 
+memoria RAM. Generalmente estos Clústers pueden tener separada una memoria RAM que va desde los 50 GB hasta los 100 GB y 
+exagerando 256 GB de memoria RAM. ¿Qué es lo importante? saber que los valores obtenidos en la columna “RAM x 1h” es 
+permanente, mientras más procesos en tiempo real tu le pongas a tu Kafka, vas a ir restándole memoria RAM que está siendo 
+ocupada permanentemente. Supongamos que tienes un Clúster de 50 GB y le empiezas a poner muchos procesos y llegaste al límite 
+50 GB, obviamente ya no hay más memoria RAM en el Clúster Kafka, ya tocaría traer más servidores para que se incremente esa 
+memoria RAM de manera dinámica y podamos seguir poniendo más procesos de tiempo real que acumulen los datos en los tópicos 
+Kafka que vamos creando para cada uno de ellos de manera permanente. Por eso se dice que la RAM es permanente y por estándar 
+vive 1 hora, se calcula de la manera que se ha explicado en los diagramas. Por eso se dice que los almacena de manera temporal 
+para ir liberando RAM, porque imagínate si nunca lo liberáramos, en 1 hora se acumula 3.6 gigas de RAM, en la siguiente hora 
+otros 3.6 gigas de RAM y en un día vas a tener muchísima RAM y al día siguiente quizás ya no tengas memoria, entonces, hay que 
+ir los liberando. Se supone que los CONSUMERS los van a extraer cada segundo, por lo que no tiene sentido que estén de manera 
+permanente, es solo para soportar la tormenta de datos. Y Kafka también te va a servir para distribuir los datos entre varios 
+sistemas, de esto vamos a hablar más en la siguiente sesión cuando implementemos con PySpark. 
