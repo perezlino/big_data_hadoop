@@ -1,0 +1,101 @@
+INTRODUCCION A HUE
+==================
+
+Lo podemos encontrar en el sitio https://gethue.com
+
+-----------------------------------------------------------------------------------------------------------------------
+COMPILAR E INSTALAR HUE
+=======================
+
+1.- Descargar desde este link --> https://cdn.gethue.com/downloads/hue-4.11.0.tgz <-- Ultima version
+
+2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> cd /home/hadoop/Descargas/
+
+3.- Desde la unica ventana abierta, [hadoop@localhost Descargas] --> tar xvf hue-4.11.0.tgz --> ls -l --> cd hue-4.11.0/
+
+4.- Desde la unica ventana abierta, [hadoop@localhost hue-4.11.0] --> ls -l
+
+5.- Abro una segunda ventana, [hadoop@localhost hue-4.11.0] --> ls -l
+
+6.- Desde la ventana 2, [hadoop@localhost hue-4.11.0] --> su - root --> Contraseña:catalina
+
+7.- Desde la ventana 2, [root@localhost ~] --> Tenemos que ir ejecutando cada linea 1 x 1:
+
+	yum install libffi-devel
+	yum install gmp-devel
+	yum install python-devel mysql-devel
+	yum install ant gcc gcc-c++ rsync krb5-devel mysql openssl-devel cyrus-sasldevel cyrus-sasl-gssapi sqlite-devel openldap-devel python-simplejson
+	yum install libtidy libxml2-devel libxslt-devel
+	yum install python-devel python-simplejson python-setuptools
+	yum install maven
+
+8.- Desde la ventana 1, [hadoop@localhost hue-4.11.0] --> PREFIX=/opt/hadoop make install
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURAR Y ARRANCAR HUE
+=========================
+
+1.- Desde la ventana 1, [hadoop@localhost hue-4.11.0] --> cd /opt/hadoop/hue
+
+2.- Desde la ventana 1, [hadoop@localhost hue] --> ls -l --> cd /desktop
+
+3.- Desde la ventana 1, [hadoop@localhost desktop] --> ls -l --> cd conf
+
+4.- Desde la ventana 1, [hadoop@localhost conf] --> pw --> /opt/hadoop/hue/desktop/conf --> ls -l --> gedit hue.ini
+
+Vamos a configurar HUE para HDFS, HIVE y YARN
+5.- Se abrirá un block de notas --> Los cambios se indican en el archivo '2-hue_configurar_y_arrancar.pdf'
+    En mi caso, en vez de utilizar 'nodo1' utilizo 'localhost' dado que asi se llama mi maquina 1.
+
+Luego hay que modificar el archivo de Hadoop 'hdfs-site.xml'
+6.- Desde la ventana 1, [hadoop@localhost conf] --> cd /opt/hadoop/etc/hadoop
+
+7.- Desde la ventana 1, [hadoop@localhost hadoop] --> ls -l --> gedir hdfs-site.xml --> Dentro del block de notas añadimos:
+
+			...
+			...
+			<property>                                 
+				<name>dfs.namenode.name.dir</name> ----\ 
+				<value>/datos/namenode</value>     ----/ No modificamos
+			</property>                                  
+			<property>                                   
+				<name>dfs.datanode.data.dir</name> ----\
+				<value>/datos/datanode</value>     ----/ No modificamos 
+			</property>  
+			<property>                                   
+				<name>dfs.webhdfs.enabled</name> ----\ Añadimos esta propiedad. Nos permite acceder a HDFS a
+				<value>true</value>              ----/ través de web, es un componente de HDFS que permite hacer
+			</property>                                    llamadas a traves de HTTP al entorno web. 
+		</configuration>  
+
+Guardamos y cerramos o :x
+
+8.- Desde la ventana 1, [hadoop@localhost hadoop] --> ls -l --> gedir core-site.xml --> Dentro del block de notas añadimos: 
+
+				<configuration>
+					<property>
+						<name>fs.defaultFS</name>             ----\  No modificamos
+						<value>hdfs://localhost:9000</value>  ----/
+					</property>
+					<property>
+						<name>hadoop.proxyuser.hue.hosts</name> ----\ Vamos a activar el 'proxyuser' para hue y para host.
+						<value>*</value>                        ----/ Le estamos diciendo que cualquier 'host' pueda conectarse.
+					</property>
+					<property>
+						<name>hadoop.proxyuser.hue.groups</name> ----\ Vamos a activar el 'proxyuser' para hue y groups.
+						<value>*</value>			 ----/ Le estamos diciendo que cualquier 'group' pueda conectarse.
+					</property>
+				</configuration>
+
+Guardamos y cerramos o :x
+
+9.- Desde la ventana 1, [hadoop@localhost hadoop] --> cd /opt/hadoop/hue/build/env/bin
+
+10.- Desde la ventana 1, [hadoop@localhost bin] --> ls -l --> ./supervisor -d --> Este es el comando que necesito para arrancar 'HUE'
+
+Verificamos que todo este funcionando correctamente
+11.- Desde la ventana 1, [hadoop@localhost bin] --> ps -ef |grep supervi 
+
+12.- Desde el navegador nos conectamos a la interfaz --> https://localhost:8888 --> recordar que 'localhost' es el nombre de nuestro nodo maestro
+
+-----------------------------------------------------------------------------------------------------------------------

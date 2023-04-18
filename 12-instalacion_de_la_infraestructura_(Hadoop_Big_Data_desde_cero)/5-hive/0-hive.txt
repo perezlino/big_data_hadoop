@@ -9,15 +9,15 @@ INSTALACIÓN Y CONFIGURACIÓN DE HIVE
 
 4.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> tar xvf /home/hadoop/Descargas/apache-hive-3.1.3-bin.tar.gz
 
-5.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> mv apache-hive-2.3.2-bin/ hive --> ls -l
+5.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> mv apache-hive-3.1.3-bin/ hive --> ls -l
 
 Configuramos las variables de entorno
 6.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> gedit /home/hadoop/.bashrc --> Se abre un block de notas --> 
-								  Debemos tener lo siguiente:
-					                          	export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+								                                  Debemos tener lo siguiente:
+					                export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
 									export HIVE_HOME=/opt/hadoop/hive
 									export ZOOKEEPER_HOME=/opt/hadoop/zoo
-									export PATH=$PATH:/opt/hadoop/bin:/opt/hadoop/sbin:$HIVE_HOME
+									export PATH=$PATH:/opt/hadoop/bin:/opt/hadoop/sbin:$HIVE_HOME/bin:$ZOOKEEPER_HOME/bin
 
 7.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> cd /opt/hadoop/hive
 
