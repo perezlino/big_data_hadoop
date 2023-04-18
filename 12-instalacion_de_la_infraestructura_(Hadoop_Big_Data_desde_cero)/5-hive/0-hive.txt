@@ -1,0 +1,144 @@
+INSTALACIÓN Y CONFIGURACIÓN DE HIVE
+===================================
+
+1.- Descargamos Hive 3.1.3 --> https://dlcdn.apache.org/hive/hive-3.1.3/ --> apache-hive-3.1.3-bin.tar.gz 
+
+2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> ls /home/hadoop/Descargas/ --> cd /opt/hadoop/
+
+3.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> pwd --> /opt/hadoop
+
+4.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> tar xvf /home/hadoop/Descargas/apache-hive-3.1.3-bin.tar.gz
+
+5.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> mv apache-hive-2.3.2-bin/ hive --> ls -l
+
+Configuramos las variables de entorno
+6.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> gedit /home/hadoop/.bashrc --> Se abre un block de notas --> 
+								  Debemos tener lo siguiente:
+					                          	export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+									export HIVE_HOME=/opt/hadoop/hive
+									export ZOOKEEPER_HOME=/opt/hadoop/zoo
+									export PATH=$PATH:/opt/hadoop/bin:/opt/hadoop/sbin:$HIVE_HOME
+
+7.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> cd /opt/hadoop/hive
+
+8.- Desde la unica ventana abierta, [hadoop@localhost hive] --> ls -l --> ls bin --> cd conf
+
+9.- Desde la unica ventana abierta, [hadoop@localhost conf] --> ls -l --> gedit hive-env.sh --> Se abre un block de notas --> Modificamos lo sgte:
+												# SET HADOOP_HOME to point to a specific hadoop install directory
+												# HADOOP HOME=${bin}/../../hadoop
+												export HADOOP_HOME=/opt/hadoop <------ Agregamos esta linea
+
+												# Hive Configuration Directory can be controlled by:
+												# export HIVE_CONF_DIR=
+												export HIVE_CONF_DIR=/opt/hadoop/hive/conf  <------ Agregamos esta linea
+Para salir del block de notas escribimos ':x'
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURAR HDFS PARA USAR HIVE
+==============================
+
+Debemos crear 2 directorios en HDFS, que van a ser el sitio donde por defecto Hive va a trabajar:
+
+1.- Desde la unica ventana abierta, [hadoop@localhost conf] -->	hdfs dfs -mkdir /tmp (quizás ya lo tengamos creado)
+
+Damos permisos al grupo para que puedan escribir
+2.- Desde la unica ventana abierta, [hadoop@localhost conf] --> hdfs dfs -chmod g+w /tmp
+
+3.- Desde la unica ventana abierta, [hadoop@localhost conf] --> hdfs dfs -mkdir -p /user/hive/warehouse 
+								  
+4.- Desde la unica ventana abierta, [hadoop@localhost conf] --> hdfs dfs -chmod g+w /user/hive/warehouse 
+
+-----------------------------------------------------------------------------------------------------------------------
+PRIMEROS PASOS - CREAR BASES DE DATOS Y TABLAS
+==============================================
+
+1.- Desde la unica ventana abierta, [hadoop@localhost conf] --> gedit hive-site.xml --> Se abrira el siguiente block de notas:
+	
+	<configuration>
+		<property>
+			<name>system:java.io.tmpdir</name>
+			<value>/tmp/hive/java</vaue>
+		</property>
+		<property>
+			<name>system:user.name</name>
+			<value>${user.name}</value>
+		</property>
+		<property>
+			<name>hive.exec.script.wrapper</name>
+			<value/>
+			<description/>
+		</property>
+	</configuration>
+
+Guardamos y cerramos. 
+
+2.- Desde la unica ventana abierta, [hadoop@localhost conf] --> cd ..
+
+3.- Desde la unica ventana abierta, [hadoop@localhost hive] --> pwd --> /opt/hadoop/hive
+
+4.- Desde la unica ventana abierta, [hadoop@localhost hive] --> mkdir bbdd --> cd bbdd
+
+Lo que hacemos es inicializar el esquema para la base de datos correspondiente. Generará una base de datos
+Derby con la que trabajar.
+5.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> schematool -dbType derby -initSchema									
+
+6.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> ls -l --> hive --> Y entramos al entorno de Hive
+
+-----------------------------------------------------------------------------------------------------------------------
+CONEXIONES REMOTAS - HIVESERVER2 Y BEELINE
+==========================================
+
+Hasta ahora hemos utilizado el cliente 'hive' que nos permitía trabajar el local. Pero claro evidentemente lo más 
+razonable es poder trabajar de forma remota. Bueno pues para eso vamos a utilizar un componente que es el HiveServer2.
+HiveServer2 es un servidor que nos permite conexiones remotas contra un entorno Hive. Lo que nos permite básicamente
+es mantener un proceso, digamos de conexión, contra el MetaStore, contra lo que almacena toda la información de 
+metadatos de Hive.
+
+(Le colocamos el '&' para que se ejecute en modo background)
+1.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> hiveserver2 &
+
+2.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> ps -ef | grep hives --> Podemos ver que ya arrancamos HiveServer2
+
+3.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> beeline --> 
+
+4.- beeline> !connect jdbc:hive2://localhost:10000 --> Nos pide un nombre de usuario --> Pulsamos ENTER hasta que desaparezca
+
+5.- Abrimos una nueva ventana, [hadoop@localhost bbdd] --> cd /opt/hadoop/hive/conf
+
+6.- En la ventana 2, [hadoop@localhost conf] --> gedit hive-site.xml --> Se abre un block de notas --> Modificamos la siguiente linea:
+
+	<property>
+		<name>hive.server2.enable.doAs</name>
+		<value>false</value> <------- Lo colocamos como 'false'
+		<description>
+			.....
+		</description>
+	</property>
+
+7.- Desde la ventana 1 --> 0: jdbc:hive2//localhost:10000> SHOW DATABASES; --> Y ya esta disponible Beeline para trabajar
+
+Salimos de Beeline (probar comando para salir, no lo dice)
+¿Como hariamos para conectarnos con Hive a otro nodo?¿Como hariamos para conectarnos en remoto?
+8.- Desde la ventana 1, [hadoop@localhost bbdd] --> cd ..
+
+9.- Desde la ventana 1, [hadoop@localhost hive] --> pwd --> /opt/hadoop/hive
+
+Lo más sencillo seria copiar toda información de Hive. ¿Por qué? Porque al final en el otro nodo, si yo me quiero conectar en remoto, 
+lo que tendría que hacer aquí es cogerme el directorio 'hive' y copiarlo. Sería lo más sencillo, porque, como ya está toda la 
+configuración tengo todo el software y tengo todo, pues, no necesito tener que instalarlo y configurarlo de nuevo. Entonces, como ya 
+lo tengo en el Nodo 1 (localhost), pues, yo le digo que me lo copie al Nodo 2 (localhost2) y tal y como está y como ya en el directorio 
+'conf' están los archivos de configuración, pues, ya lo debería tener todo funcionando.
+10.- Desde la ventana 1, [hadoop@localhost hive] --> ls -l --> scp -r hive localhost2:/opt/hadoop
+
+11.- Desde la ventana 2, [hadoop@localhost conf] --> ssh localhost2
+
+12.- Desde la ventana 2, [hadoop@localhost2 ~] -->cd /opt/hadoop/hive
+
+13 - Desde la ventana 2, [hadoop@localhost hive] --> pwd --> /opt/hadoop/hive --> beeline -->
+
+Ahora desde el nodo2 (localhost2) me quiero conectar al nodo1(localhost):
+14.- beeline> !connect jdbc:hive2://localhost:10000 --> Nos pide un nombre de usuario --> Pulsamos ENTER hasta que desaparezca
+
+     Si en el caso de que exista una base de datos, por ejemplo, que se llame 'dbejemplo', podriamos conectarnos directo a esta base de datos
+     utilizando este comando --> !connect jdbc:hive2://localhost:10000/dbejemplo
+

@@ -1,5 +1,6 @@
 1.- Descarga Hadoop
 
+Estoy utilizando CentOS 7
 Descargue este archivo: hadoop-3.3.4.tar.gz  
 
 PREPARAR EL SOFTWARE HADOOP

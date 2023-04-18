@@ -1,0 +1,336 @@
+AE,United Arab Emirates,Rain,1
+AF,Afghanistan,Continuous_rain,1
+AF,Afghanistan,Downpour,4
+AF,Afghanistan,Flooding,1
+AF,Afghanistan,Rain,4
+AL,Albania,Downpour,1
+AM,Armenia,Downpour,3
+AO,Angola,Downpour,3
+AR,Argentina,Downpour,5
+AR,Argentina,Rain,1
+AS,American Samoa,Downpour,4
+AS,American Samoa,Rain,1
+AT,Austria,Downpour,7
+AT,Austria,Rain,2
+AT,Austria,Snowfall_snowmelt,1
+AU,Australia,Continuous_rain,2
+AU,Australia,Downpour,56
+AU,Australia,Mining_digging,1
+AU,Australia,Rain,15
+AU,Australia,Tropical_Cyclone,1
+AU,Australia,Unknown,4
+AZ,Azerbaijan,Downpour,16
+AZ,Azerbaijan,Snowfall_snowmelt,1
+AZ,Azerbaijan,Unknown,2
+BA,Bosnia and Herzegovina,Downpour,1
+BA,Bosnia and Herzegovina,Rain,4
+BB,Barbados,Downpour,1
+BD,Bangladesh,Downpour,20
+BD,Bangladesh,Monsoon,3
+BD,Bangladesh,Rain,8
+BD,Bangladesh,Unknown,2
+BD,Bangladesh,unknown,1
+BF,Burkina Faso,Rain,1
+BG,Bulgaria,Construction,1
+BG,Bulgaria,Downpour,6
+BG,Bulgaria,Mining_digging,1
+BG,Bulgaria,Rain,4
+BM,Bermuda,Rain,1
+BR,Brazil,Continuous_rain,3
+BR,Brazil,Downpour,188
+BR,Brazil,Other,1
+BR,Brazil,Rain,12
+BR,Brazil,Unknown,1
+BT,Bhutan,Downpour,14
+BT,Bhutan,Rain,5
+BT,Bhutan,Unknown,1
+CA,Canada,Construction,1
+CA,Canada,Continuous_rain,2
+CA,Canada,Downpour,52
+CA,Canada,Other,1
+CA,Canada,Rain,29
+CA,Canada,Snowfall_snowmelt,3
+CA,Canada,Tropical_Cyclone,2
+CA,Canada,Unknown,13
+CH,Switzerland,Downpour,1
+CH,Switzerland,Rain,5
+CL,Chile,Downpour,10
+CM,Cameroon,Downpour,2
+CM,Cameroon,Rain,1
+CM,Cameroon,Unknown,1
+CN,China,Construction,1
+CN,China,Continuous_rain,13
+CN,China,Dam_Embankment_Collapse,1
+CN,China,Downpour,197
+CN,China,Earthquake,4
+CN,China,Flooding,1
+CN,China,Freeze_thaw,1
+CN,China,Mining_digging,4
+CN,China,Monsoon,1
+CN,China,Other,1
+CN,China,Rain,84
+CN,China,Snowfall_snowmelt,2
+CN,China,Tropical_Cyclone,23
+CN,China,Unknown,13
+CN,China,unknown,1
+CO,Colombia,Continuous_rain,2
+CO,Colombia,Downpour,71
+CO,Colombia,Mining_digging,1
+CO,Colombia,Rain,9
+CR,Costa Rica,Downpour,22
+CR,Costa Rica,Earthquake,1
+CR,Costa Rica,Mining_digging,1
+CR,Costa Rica,Rain,7
+CR,Costa Rica,Tropical_Cyclone,18
+CU,Cuba,Downpour,1
+CU,Cuba,Tropical_Cyclone,2
+CZ,Czech Republic,Construction,1
+CZ,Czech Republic,Downpour,1
+CZ,Czech Republic,Rain,1
+DE,Germany,Continuous_rain,1
+DE,Germany,Rain,1
+DM,Dominica,Downpour,9
+DM,Dominica,Rain,3
+DM,Dominica,Tropical_Cyclone,1
+DM,Dominica,unknown,1
+DO,Dominican Republic,Downpour,6
+DO,Dominican Republic,Rain,1
+DO,Dominican Republic,Tropical_Cyclone,5
+DO,Dominican Republic,Unknown,1
+EC,Ecuador,Downpour,13
+EC,Ecuador,Rain,5
+ES,Spain,Downpour,5
+ES,Spain,Rain,4
+ES,Spain,unknown,1
+ET,Ethiopia,Downpour,1
+FJ,Fiji,Downpour,18
+FJ,Fiji,Rain,8
+FJ,Fiji,Tropical_Cyclone,2
+FJ,Fiji,unknown,1
+FR,France,Downpour,3
+FR,France,Other,1
+FR,France,Unknown,1
+FR,France,unknown,1
+GA,Gabon,Downpour,1
+GB,United Kingdom,Construction,1
+GB,United Kingdom,Continuous_Rain,7
+GB,United Kingdom,Downpour,62
+GB,United Kingdom,Flooding,4
+GB,United Kingdom,No_Apparent_Trigger,1
+GB,United Kingdom,Other,2
+GB,United Kingdom,Rain,45
+GB,United Kingdom,Snowfall_snowmelt,1
+GB,United Kingdom,Tropical_Cyclone,1
+GB,United Kingdom,Unknown,14
+GB,United Kingdom,unknown,9
+GD,Grenada,Downpour,2
+GE,Georgia,Downpour,15
+GE,Georgia,Rain,6
+GE,Georgia,Tropical_Cyclone,2
+GE,Georgia,Unknown,1
+GH,Ghana,Downpour,5
+GN,Guinea,Construction,1
+GN,Guinea,Downpour,1
+GR,Greece,Downpour,1
+GR,Greece,Rain,3
+GT,Guatemala,Downpour,17
+GT,Guatemala,Earthquake,1
+GT,Guatemala,Rain,5
+GT,Guatemala,Tropical_Cyclone,18
+HN,Honduras,Downpour,6
+HN,Honduras,Mining_digging,1
+HN,Honduras,Rain,1
+HN,Honduras,Tropical_Cyclone,3
+HR,Croatia,Downpour,1
+HT,Haiti,Downpour,12
+HT,Haiti,Rain,2
+HT,Haiti,Tropical_Cyclone,4
+ID,Indonesia,Continuous_Rain,1
+ID,Indonesia,Continuous_rain,6
+ID,Indonesia,Downpour,165
+ID,Indonesia,Earthquake,3
+ID,Indonesia,Mining_digging,2
+ID,Indonesia,Monsoon,4
+ID,Indonesia,Rain,92
+ID,Indonesia,Unknown,8
+ID,Indonesia,unknown,1
+IE,Ireland,Downpour,14
+IE,Ireland,Rain,5
+IE,Ireland,Unknown,1
+IL,Israel,Downpour,1
+IL,Israel,Rain,1
+IN,India,Construction,2
+IN,India,Continuous_Rain,3
+IN,India,Continuous_rain,41
+IN,India,Downpour,569
+IN,India,Mining_digging,4
+IN,India,Monsoon,27
+IN,India,Other,1
+IN,India,Rain,202
+IN,India,Snowfall_snowmelt,6
+IN,India,Tropical_Cyclone,5
+IN,India,Unknown,22
+IN,India,unknown,2
+IS,Iceland,Rain,2
+IT,Italy,Continuous_Rain,2
+IT,Italy,Downpour,39
+IT,Italy,Earthquake,1
+IT,Italy,Rain,3
+IT,Italy,Unknown,1
+JM,Jamaica,Downpour,14
+JM,Jamaica,Rain,7
+JM,Jamaica,Tropical_Cyclone,7
+JM,Jamaica,Unknown,1
+JO,Jordan,Rain,1
+JP,Japan,Construction,1
+JP,Japan,Continuous_rain,2
+JP,Japan,Downpour,29
+JP,Japan,Earthquake,1
+JP,Japan,Rain,6
+JP,Japan,Tropical_Cyclone,11
+JP,Japan,Unknown,3
+KE,Kenya,Downpour,22
+KE,Kenya,Mining_digging,1
+KE,Kenya,Rain,20
+KE,Kenya,Unknown,1
+KG,Kyrgyzstan,Downpour,6
+LB,Lebanon,Downpour,6
+LB,Lebanon,Snowfall_snowmelt,1
+LK,Sri Lanka,Continuous_rain,5
+LK,Sri Lanka,Downpour,35
+LK,Sri Lanka,Monsoon,6
+LK,Sri Lanka,Rain,10
+LK,Sri Lanka,Tropical_Cyclone,4
+MG,Madagascar,Downpour,1
+MG,Madagascar,Tropical_Cyclone,2
+MM,Myanmar,Downpour,5
+MM,Myanmar,Rain,2
+MW,Malawi,Rain,1
+MX,Mexico,Construction,1
+MX,Mexico,Continuous_rain,1
+MX,Mexico,Downpour,21
+MX,Mexico,Rain,7
+MX,Mexico,Tropical_Cyclone,29
+MY,Malaysia,Construction,1
+MY,Malaysia,Continuous_rain,3
+MY,Malaysia,Downpour,71
+MY,Malaysia,Flooding,1
+MY,Malaysia,Other,1
+MY,Malaysia,Rain,30
+MY,Malaysia,Unknown,3
+NA,Namibia,Downpour,2
+NG,Nigeria,Downpour,4
+NG,Nigeria,Rain,3
+NG,Nigeria,Unknown,2
+NI,Nicaragua,Continuous_rain,14
+NI,Nicaragua,Downpour,3
+NI,Nicaragua,Tropical_Cyclone,1
+NO,Norway,Continuous_rain,1
+NO,Norway,Downpour,7
+NO,Norway,Rain,6
+NO,Norway,Snowfall_snowmelt,1
+NO,Norway,Unknown,2
+NP,Nepal,Continuous_Rain,2
+NP,Nepal,Continuous_rain,25
+NP,Nepal,Downpour,187
+NP,Nepal,Earthquake,1
+NP,Nepal,Flooding,1
+NP,Nepal,Mining_digging,5
+NP,Nepal,Monsoon,14
+NP,Nepal,Rain,74
+NP,Nepal,Snowfall_snowmelt,1
+NP,Nepal,Tropical_Cyclone,1
+NP,Nepal,Unknown,12
+NP,Nepal,unknown,1
+NZ,New Zealand,Continuous_rain,2
+NZ,New Zealand,Downpour,54
+NZ,New Zealand,Earthquake,9
+NZ,New Zealand,Freeze_thaw,1
+NZ,New Zealand,Rain,8
+NZ,New Zealand,Tropical_Cyclone,6
+NZ,New Zealand,Unknown,6
+NZ,New Zealand,unknown,1
+OM,Oman,Rain,1
+PA,Panama,Downpour,11
+PA,Panama,Rain,1
+PE,Peru,Downpour,41
+PE,Peru,Earthquake,1
+PE,Peru,Rain,6
+PG,Papua New Guinea,Continuous_rain,1
+PG,Papua New Guinea,Downpour,6
+PG,Papua New Guinea,Rain,5
+PH,Philippines,Construction,3
+PH,Philippines,Continuous_rain,18
+PH,Philippines,Downpour,236
+PH,Philippines,Earthquake,1
+PH,Philippines,Mining_digging,3
+PH,Philippines,Rain,85
+PH,Philippines,Snowfall_snowmelt,1
+PH,Philippines,Tropical_Cyclone,195
+PH,Philippines,Unknown,4
+PK,Pakistan,Continuous_Rain,1
+PK,Pakistan,Continuous_rain,2
+PK,Pakistan,Downpour,48
+PK,Pakistan,Monsoon,4
+PK,Pakistan,Rain,25
+PK,Pakistan,Unknown,1
+PK,Pakistan,unknown,2
+PL,Poland,Downpour,2
+PR,Puerto Rico,Tropical_Cyclone,2
+PT,Portugal,Downpour,1
+PT,Portugal,Rain,3
+PT,Portugal,Tropical_Cyclone,1
+PY,Paraguay,Mining_digging,1
+RO,Romania,Rain,3
+RS,Serbia,Downpour,1
+RW,Rwanda,Downpour,3
+RW,Rwanda,Rain,1
+SB,Solomon Islands,Downpour,1
+SD,Sudan,Mining_digging,1
+SG,Singapore,Unknown,1
+SI,Slovenia,Rain,1
+SK,Slovakia,Downpour,2
+SL,Sierra Leone,Continuous_rain,1
+SL,Sierra Leone,Downpour,5
+SL,Sierra Leone,Rain,1
+SV,El Salvador,Downpour,1
+SV,El Salvador,Tropical_Cyclone,7
+SZ,Swaziland,Downpour,1
+TH,Thailand,Continuous_rain,3
+TH,Thailand,Dam_Embankment_Collapse,1
+TH,Thailand,Downpour,39
+TH,Thailand,Monsoon,1
+TH,Thailand,Rain,13
+TH,Thailand,Tropical_Cyclone,1
+TJ,Tajikistan,Downpour,10
+TJ,Tajikistan,Rain,1
+TR,Turkey,Downpour,7
+TR,Turkey,Rain,6
+TT,Trinidad and Tobago,Downpour,42
+TT,Trinidad and Tobago,Rain,4
+TT,Trinidad and Tobago,Tropical_Cyclone,10
+UA,Ukraine,Downpour,1
+UG,Uganda,Downpour,35
+UG,Uganda,Rain,3
+US,United States,Construction,1
+US,United States,Continuous_Rain,14
+US,United States,Continuous_rain,25
+US,United States,Dam_Embankment_Collapse,1
+US,United States,Downpour,882
+US,United States,Flooding,3
+US,United States,Freeze_thaw,8
+US,United States,Mining_digging,1
+US,United States,Other,3
+US,United States,Rain,409
+US,United States,Snowfall_snowmelt,11
+US,United States,Tropical_Cyclone,10
+US,United States,Unknown,36
+US,United States,unknown,35
+VC,Saint Vincent and the Grenadines,Tropical_Cyclone,7
+VU,Vanuatu,Rain,1
+YE,Yemen,Downpour,4
+YE,Yemen,Rain,1
+ZA,South Africa,Downpour,7
+ZA,South Africa,Other,1
+ZA,South Africa,Rain,9
+ZM,Zambia,Downpour,1

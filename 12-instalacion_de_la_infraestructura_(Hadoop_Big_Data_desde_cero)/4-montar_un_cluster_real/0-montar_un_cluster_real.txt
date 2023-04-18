@@ -1,0 +1,326 @@
+CLONAR EL NODO HADOOP
+=====================
+
+1.- Desde la ventana 1, [hadoop@localhost ~] --> stop-yarn.sh --> stop-hdfs.sh --> stop-dfs.sh
+
+2.- Desde la ventana 2, [hadoop@localhost ~] --> su - root
+                                                 contraseña: catalina
+
+3.- Desde la ventana 2, [root@localhost ~] --> init 0 --> Apagará la maquina
+
+4.- Desde VirtualBox configuraremos nuestra maquina --> Configuración --> Red --> Adaptador 1 => Conectado a: NAT
+										  (Lo vamos a utilizar para las conexiones via
+                                                                                   red)
+      							                          Adaptador 2 => Habilitar adaptador de red
+												 Conectado a: Red interna
+ 										  (Esta es la red que vamos a utilizar para las
+                                                                                  conexiones entre los nodos Hadoop)	 
+
+5.- Luego sobre el nombre de la maquina --> clic derecho --> Clonar --> Escribimos el nombre 'localhost2' --> Activamos casilla 'Reinicializar ... '
+                                        --> Clonacion completa --> Clonar
+
+6.- Asi si queremos crear mas nodos, solo debemos seguir el paso 5.
+ 
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURAR LA RED EN LOS NODOS
+==============================
+
+Lo primero que tenemos que hacer es cambiar de nombre a la maquina clonada
+
+1.- Desde la ventana 1, [hadoop@localhost ~] --> uname -a --> Nos aparece el nombre antiguo
+
+2.- Desde la ventana 2, [root@localhost ~] --> hostname nodo 2 --> uname -a --> cd /etc/sysconfig
+
+3.- Desde la ventana 2, [root@localhost sysconfig] --> gedit network --> Se abre un block de notas --> Aqui cambiamos el nombre del HOSTNAME
+
+4.- Desde la ventana 2, [root@localhost sysconfig] --> hostname --> nos devuelve el nombre que le dimos a la maquina
+
+Bueno realmente hay que tener en cuenta que los tres nodos se tienen que hablar entre sí, es decir, tienen que poder trabajar.
+¿Qué vamos a hacer?
+5.- Desde la ventana 2, [root@localhost sysconfig] --> cd /etc
+
+Vamos a indicar las IPs que van a tener cada uno de los nodos que, además, van a ser fijas para este curso, que es lo normal en estos entornos.
+6.- Desde la ventana 2, [root@localhost etc] --> gedit hosts --> 192.168.0.101  localhost  (suponiendo que nuestras maquinas se llaman asi)
+                                                                 192.168.0.102  localhost2
+                                                                 192.168.0.103  localhost3
+
+7.- Desde el escritorio --> Damos clic derecho sobre los computadores --> Editar las conexiones --> Seleccionamos 'Auto eth1' --> Editar
+                        --> Parámetros IPv4 --> Método: Manual --> Direcciones: Direccion      Mascara de red  Puerta de enlace --> Aplicar
+							                        192.168.0.101  255.255.255.0   192.168.0.1                                       
+
+			--> Contraseña: catalina --> Autenticar --> Luego cerramos el otro cuadro de dialogo
+
+8.- Desde el escritorio --> Damos clic normal sobre los computadores --> Pinchamos sobre 'Auto eth1' --> Luego abrimos el terminal
+
+9.- Desde la ventana, [hadoop@localhost ~] --> ifconfig --> Podremos confirmar que tenemos las dos tarjetas
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURAR SSH ENTRE LOS NODOS
+==============================
+
+Una vez que hemos configurado la red vamos a configurar ahora la conexión segura entre las tres máquinas.
+
+1.- Desde la ventana 1. [hadoop@localhost ~] --> cd .ssh
+
+Como hemos clonado la máquina no nos queda más remedio que borrarlo todo y volver a generarlo 
+2.- Desde la ventana 1, [hadoop@localhost .ssh] --> ls -l --> rm *
+
+3.- Desde la ventana 2, [hadoop@localhost .ssh] --> ssh localhost2
+						    contraseña: catalina
+
+4.- Desde la ventana 2, [hadoop@localhost2 ~] --> cd .ssh
+
+5.- Desde la ventana 2, [hadoop@localhost2 .ssh] --> rm *
+
+6.- Desde la ventana 3, [hadoop@localhost .ssh] --> ssh localhost3
+						    contraseña: catalina
+
+7.- Desde la ventana 3, [hadoop@localhost3 ~] --> cd .ssh
+
+8.- Desde la ventana 3, [hadoop@localhost3 .ssh] -->  rm *
+
+9.- Desde la ventana 1, [hadoop@localhost .ssh] --> ssh-keygen --> Pulsamos ENTER (dejamos en blanco) las 3 veces uqe nos pida ingresar datos
+
+10.- Desde la ventana 1, [hadoop@localhost .ssh] --> ls -l --> cp id_rsa.pub authorized_keys --> ls -l --> cat authorized_keys
+
+Copiamos este archivo a la maquina 2
+11.- Desde la ventana 1, [hadoop@localhost .ssh] --> scp authorized_keys localhost2:/home/hadoop/.ssh
+						     contraseña: catalina
+
+12.- Desde la ventana 2, [hadoop@localhost2 .ssh] --> ls -l --> cat authorized_keys
+
+13.- Desde la ventana 2, [hadoop@localhost2 .ssh] --> ssh-keygen --> Pulsamos ENTER (dejamos en blanco) las 3 veces uqe nos pida ingresar datos
+
+Como ya tenemos en la maquina 2 el archivo 'authorized_keys', aca lo que se hace es ANEXAR (> es sobreescribir y >> es anexar) los datos de 
+id_rsa.pub. Se genera un archivo que tendra las credenciales de la maquina 1 y la maquina 2.
+14.- Desde la ventana 2, [hadoop@localhost2 .ssh] --> ls -l --> cat id_rsa.pub >> authorized_keys
+
+Copiamos este archivo a la maquina 3
+15.- Desde la ventana 2, [hadoop@localhost2 .ssh] --> scp authorized_keys localhost3:/home/hadoop/.ssh
+						      contraseña: catalina
+
+16.- Desde la ventana 3, [hadoop@localhost3 .ssh] --> ls -l --> cat authorized_keys
+
+17.- Desde la ventana 3, [hadoop@localhost3 .ssh] --> ssh-keygen --> Pulsamos ENTER (dejamos en blanco) las 3 veces uqe nos pida ingresar datos
+
+Como ya tenemos en la maquina 3 el archivo 'authorized_keys', aca lo que se hace es ANEXAR (> es sobreescribir y >> es anexar) los datos de 
+id_rsa.pub. Se genera un archivo que tendra las credenciales de la maquina 1, la maquina 2 y la maquina 3.
+18.- Desde la ventana 3, [hadoop@localhost3 .ssh] --> ls -l --> cat id_rsa.pub >> authorized_keys --> cat authorized_keys
+
+Copiamos este archivo a las maquinas 1 y 2
+19.- Desde la ventana 3, [hadoop@localhost3 .ssh] --> scp authorized_keys localhost:/home/hadoop/.ssh
+						      contraseña: catalina
+
+20.- Desde la ventana 3, [hadoop@localhost3 .ssh] --> scp authorized_keys localhost2:/home/hadoop/.ssh
+						      contraseña: catalina
+
+21.- Desde la ventana 2, [hadoop@localhost2 .ssh] --> cat authorized_keys
+
+22.- Desde la ventana 1, [hadoop@localhost .ssh] --> cat authorized_keys
+
+(Desde una ventana podriamos entrar a las distintas máquinas y para salirnos utilizamos 'exit')
+-----------------------------------------------------------------------------------------------------------------------
+HADOOP 3 - ​CAMBIO DE NOMBRE DEL FICHEROS DE NODOS ESCLAVOS
+CAMBIO DE NOMBRE DEL FICHEROS DE NODOS ESCLAVOS EN  HADOOP 3
+============================================================
+
+Hola, si estás siguiendo este curso y estás usando la versión 3 de Hadoop, uno de los cambios importantes que se ha 
+producido respecto a la versión 2, es el cambio del nombre del fichero que contiene los esclavos. En vez del fichero 
+"slaves" que se usa en la versión 2, se usa el fichero "workers". Por tanto, siempre que en el resto de vídeos haga 
+referencia a ese fichero, recuerda cambiarle el nombre.
+
+-----------------------------------------------------------------------------------------------------------------------
+MODIFICAR LOS ARCHIVOS DE CONFIGURACION DEL CLUSTER
+===================================================
+
+(Nosotros clonamos las maquinas, por tanto, no deberiamos tener ningun problema, pero en la vida real, no se hace esto)
+Estas son las caracteristicas de configuracion que deberiamos tener entre las maquinas:
+- El mismo usuario en todos las maquinas
+- Que sean accesibles a través de SSH sin contraseña
+- Tener los mismos directorios en cada maquina
+- Haber copiado el software hadoop en todos los nodos y en el mismo sitio
+- Haber creado el directorio de datos en todos los nodos y haberle dado el permiso correspondiente (en nuestro caso /datos/datanode)
+- Es decir, los servidores deberian ser clones a nivel de Hadoop.
+
+1.- Debemos verificar que el archivo 'authorized_keys' tenga solo los siguientes permisos en las 3 máquinas --> -rw------
+													    --> chmod 0600 authorized_keys 				
+
+2.- Desde la unica ventana abierta, [hadoop@localhost .ssh] --> exit (si no pasa este comando, utilizar antes 'ssh localhost') --> 
+                                                                De esta manera salimos de la maquina 1 (En realidad no se si es necesario utilizarlo)
+
+3.- Desde la unica ventana abierta, [hadoop@localhost .ssh] --> ssh localhost2 (Ingresamos a la máquina 2)
+
+4.- Desde la unica ventana abierta, [hadoop@localhost2 ~] --> cd /datos
+
+El directorio 'namenode' solo debe estar en el nodo maestro
+5.- Desde la unica ventana abierta, [hadoop@localhost2 datos] --> ls -l --> rm -rf namenode --> cd datanode
+
+6.- Desde la unica ventana abierta, [hadoop@localhost2 datanode] --> ls -l --> rm -rf currrent/ --> cd ..
+
+7.- Desde la unica ventana abierta, [hadoop@localhost2 datos] --> ls -l --> exit
+
+8.- Desde la unica ventana abierta, [hadoop@localhost .ssh] --> ssh localhost3 
+
+9.- Desde la unica ventana abierta, [hadoop@localhost3 ~] --> cd /datos
+
+10.- Desde la unica ventana abierta, [hadoop@localhost3 datos] --> ls -l --> rm -rf namenode --> cd datanode
+
+12.- Desde la unica ventana abierta, [hadoop@localhost3 datanode] --> ls -l --> rm -rf currrent/ --> cd ..
+
+13.- Desde la unica ventana abierta, [hadoop@localhost3 datos] --> ls -l --> exit
+
+14.- Desde la unica ventana abierta, [hadoop@localhost .ssh] --> cd /datos
+
+15.- Desde la unica ventana abierta, [hadoop@localhost datos] --> ls -l --> rm -rf datanode --> ls -l --> cd /opt/hadoop/etc/hadoop/
+
+16.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> ls -l --> gedit core-site.xml --> Se abrira un block de notas
+							       --> El core-site no lo tenemos que tocar. ¿Por qué? Porque el maestro como puedes
+								   ver aquí, el maestro de HDFS sigue siendo la maquina 1 'localhost', por lo 
+								   tanto, ese lo dejamos igual.	
+
+17.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> ls -l --> gedit hdfs-site.xml --> Se abrira un block de notas
+Este archivo si lo modificamos:
+		<configuration>
+			<property>
+				<name>dfs.replication</name> ----\  Con esto le decimos a Hadoop que no replique 3 veces
+				<value>2</value>             ----/  sino, que no replique, por eso colocamos "1" dado que tenemos 
+			</property>				    1 solo nodo. Ahora como vamos a tener "2" esclavos colocamos 2. 	
+			<property>                                  Tendremos 1 maestro (localhost) y 2 esclavos (localhost2 y localhost3)  
+				<name>dfs.namenode.name.dir</name> ----\ 
+				<value>/datos/namenode</value>     ----/ No modificamos
+			</property>                                  
+			<property>                                   
+				<name>dfs.datanode.data.dir</name> ----\
+				<value>/datos/datanode</value>     ----/ No modificamos 
+			</property>                                   
+		</configuration>      
+
+Copiamos este archivo 'hdfs-site.xml' a los otros nodos:
+18.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> scp hdfs-site.xml localhost2:/opt/hadoop/etc/hadoop/
+
+19.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> scp hdfs-site.xml localhost3:/opt/hadoop/etc/hadoop/
+
+20.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> gedit mapred-site.xml --> No modificamos este archivo
+
+21.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> gedit yarn-site.xml --> No modificamos este archivo
+
+Indicamos cuales son los nodos esclavos (maquinas slaves)
+22.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> gedit workers --> Se abrira un block de notas --> Escribimos: localhost2
+																 localhost3
+-----------------------------------------------------------------------------------------------------------------------
+ARRANCAR EL CLUSTER
+===================
+
+Debemos quitar el firewall. Esto debemos hacerlo en las 3 máquinas. En la vida real lo que hariamos es habilitar los puertos
+del cortafuegos, no quitarlo entero. Pero para el curso es indiferente.
+1.- Desde escritorio --> Sistema --> Cortafuegos (Firewall) --> Contraseña: catalina --> Pulsamos 'Desactivar' --> Aplicar --> Si
+
+Antes de arrancar el Cluster definitivamente debemos formatear el 'namenode'. 
+2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> hdfs namenode -format --> Y
+
+3.- Desde la unica ventana abierta, [hadoop@localhost ~] --> start-dfs.sh --> jps --> Solo vemos el NameNode y el SecondaryNameNode
+
+4.- Abrimos una segunda ventana, [hadoop@localhost ~] --> ssh localhost2 --> jps --> Tenemos solo el DataNode
+
+5.- Abrimos una tercera ventana, [hadoop@localhost ~] --> ssh localhost3 --> jps --> Tenemos solo el DataNode
+
+6.- Desde la ventana 1, [hadoop@localhost ~] --> start-yarn.sh --> jps --> Ahora tenemos tambien ResourceManager
+
+8.- Desde la ventana 2, [hadoop@localhost2 ~] --> jps --> Ahora tenemos aqui el NodeManager
+
+9.- Desde la ventana 3, [hadoop@localhost3 ~] --> jps --> Ahora tenemos aqui el NodeManager
+
+10.- Si nos vamos a la interfaz https://localhost:8088, podemos ver que efectivamente aquí tengo mis dos nodos funcionando, localhost2 y localhost3 
+     y no se ve el nodo maestro (localhost) porque no figura como esclavo.
+
+-----------------------------------------------------------------------------------------------------------------------
+COMANDO YARN - GESTIONAR EL CLUSTER
+===================================
+
+El comando Yarn es un comando que nos permite gestionar, visualizar y ver comprobar las aplicaciones de la infraestructura Yarn que se están
+ejecutando en el Cluster.
+
+1.- Desde la ventana 1, [hadoop@localhost ~] --> cd /opt/hadoop/share/hadoop/
+
+2.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn --> Podemos ver comandos como 'resourcemanager' que nos permite arrancar el 
+                                                               ResourceManager, como tambien 'nodemanager' que nos permite arrancar el
+                                                               NodeManager.
+
+3.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn application -->  Podemos ver las aplicaciones que tenemos ejecutando dentro
+									    del entorno y podemos hacer ciertas cosas.
+
+4.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn container -->  Podemos ver información sobre los distintos contenedores que han
+									  ejecutado las aplicaciones
+
+5.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn node -->  Podemos ver la información de los nodos con los que estamos trabajando
+							          
+6.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn node -list --> Nos devuelve  una lista de todos los nodos que en este momento están funcionando dentro de nuestro Cluster.
+
+7.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn node -list -showDetails --> También es una lista de los nodos pero con más detalles
+
+8.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn application -list --> Si tuvieramos procesos ejecutandose, ninguna aplicacion procesandose. 
+
+9.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn application -status tracking-url --> En 'tracking-url' colocamos el valor que nos entrega la aplicacion que se está ejecutando
+											        de Traking-URL y esto lo obtenemos luego de haber ejecutado el comando del paso 8 y si 
+												tenemos aplicaciones corriendo.
+
+10.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn application -kill tracking-url -->	De esta manera detenemos la aplicacion que se esta ejecutando, debemos entregar el valor
+                                                                                                de Tracking-URL de la aplicacion.
+
+11.- Desde la ventana 1, [hadoop@localhost hadoop] --> yarn application -list --> Copiamos el valor de Traking-URL de la aplicacion que esta ejecutandose
+     Desde la ventana 1, [hadoop@localhost hadoop] --> yarn applicationattempt -list tracking-url --> Podemos ver los contenedores que estan asociados. Podemos copiar el Tracking-URL y
+              											      le podemos preguntar por la información de los contenedores.
+     Desde la ventana 1, [hadoop@localhost hadoop] --> yarn container -list appattempt tracking-url-del-container --> Podemos ver informacion del container
+
+-----------------------------------------------------------------------------------------------------------------------
+YARN SCHEDULER - INTRODUCCION
+=============================
+
+¿Que hace este recurso? Determinar los recursos que tienen, digamos, cada uno de los componentes que van a formar parte del Cluster. En principio podríamos pensar 
+que a todos se les da las mismas características, los mismos recursos, y eso es así en cierto modo, si el clúster o si el planificador no lo tenemos preparado. 
+Pero vamos a ver cómo funciona. En realidad tenemos dos tipos de planificadores:
+
+- El FAIR SCHEDULER y 
+- El CAPACITY SCHEDULER
+
+Hasta hace poco el 'Fair Scheduler' era el predefinido, el que se utilizaba en Hadoop 1, sobre todo en la versión 1. Pero desde la versión 2 se utiliza el 
+'Capacity Scheduler' y ¿qué diferencias hay entre uno y otro? Bueno el 'Fair Scheduler' básicamente lo que tenía eran un POOL DE RECURSOS, dependiendo del 
+número de nodos, de la memoria, de la CPU, etcétera y a todos los procesos que se lanzaban dentro del 'Fair Scheduler' se asignaban, por así decirlo, de 
+manera homogénea recursos dentro de estos POOLS dentro del Cluster. Es decir, era un planificador muy 'homogéneo', le era difícil darle demasiada prioridad 
+a los recursos. En cambio, con el 'Capacity Scheduler' utilizamos una estructura de jerarquías, ¿qué quiere decir esto? lo que quiero decir es que ahora 
+vamos a tener unas cosas que se llaman 'Queues' o 'Colas'. Empezando por la cola primaria o 'root', si no le decimos nada, colgando de 'root' vamos a tener 
+una cola que se llama 'default' que está asociada al 100% de los recursos, es decir, que por defecto cuando no tengo configurado el 'Capacity Scheduler' se 
+comporta de una manera relativamente parecida al 'Fair Scheduler' porque le estoy diciendo que los recursos compitan por el 100 por ciento de los mismos. 
+Pero en cambio, yo puedo tener una arquitectura como la de 'Capacity Scheduler' donde puedo dividir en distintas jerarquías, en distintas colas, mis recursos.
+Por ejemplo, supongamos que esta máquina, esté Cluster, lo utilizamos tanto para producción como para desarrollo y, además, dentro de cada una de ellas tenemos 
+distintas ramas. Bueno pues yo podría decir con el 'Capacity Scheduler' que la cola que va por 'PROD' utilizará el 70% de la capacidad del clúster, mientras 
+que la que va por la parte de 'DESA' utiliza sólo el 30%. Luego dentro de 'PROD' en las ramas 'WAREHOUSE' y 'BATCH' podríamos a su vez decir que el Warehouse 
+ocupa el 80% y el batch el 20% de estos recursos del padre (de los recursos de 'PROD'), es decir, que lo que hacen los hijos dentro del 'Capacity' es heredar
+los recursos que se le han asignado al padre y los podemos configurar, de forma que si yo le pongo 80 y 20 de todos digamos los recursos que voy a tener dentro 
+de mi Cluster, el recurso 'Warehouse' es el que más se puede llevar y en cambio aquí (para DESA1 y DESA2 ) le limitamos en el padre, pues lo mismo, podríamos 
+decidir que estos dos tuvieran distintos recursos, si no les digo nada estos dos hijos de aquí utilizan el 100 por cien del recurso asignado al padre, es decir, 
+utilizan el 100% del 30% que es el que se le ha dado al padre. 
+
+De acuerdo en el siguiente capítulo vamos a ver cómo podemos configurar el 'Scheduler', pero ya puedes suponer que es un recurso muy valioso cuando tengo procesos
+muy heterogéneos, es decir, si yo en mi Cluster tengo procesos muy distintos en cuanto a funcionalidad y sobretodo en cuanto a criticidad o urgencia, pues, yo le 
+puedo decir que determinados recursos se ejecuten más rápido, porque les doy más recursos, sencillamente más capacidad en el Cluster. En cambio, otros procesos de 
+tipo menor le puedo decir que utilizan menos recursos.
+
+-----------------------------------------------------------------------------------------------------------------------
+YARN SCHEDULER - SU FUNCIONAMIENTO
+==================================
+
+Lo primero que tenemos que ver es cuáles son los Scheduler que tenemos, el planificador que tenemos y cuáles son sus colas.
+
+1.- Lo primero que podemos utilizar es la interfaz de Hadoop --> https://localhost:8088 --> En el apartado inicial SCHEDULER METRICS podemos visualizar que Scheduler
+                                                                                            se está utilizando. Dentro del menu se encuentra la opción 'Scheduler' donde
+											    podemos encontrar mayor información.
+
+-----------------------------------------------------------------------------------------------------------------------
+YARN SCHEDULER - CONFIGURACIÓN
+==============================
+
+El archivo que debemos de modificar para trabajar con las colas es el 'capacity-scheduler'.xml
+
+-----------------------------------------------------------------------------------------------------------------------
+

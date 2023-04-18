@@ -83,8 +83,8 @@ Empezaremos con el primer archivo
 
 Esto nos dice que "sistema de archivos vamos a usar para hadoop". Nosotros vamos a utilizar el "standar" que es hdfs://.
 Luego, tenemos que decirle a nuestro sistema de Hadoop es donde puede localizar el "Maestro HDFS", es decir, el servidor
-maestro que va a contener los datos, que se suele llamar "NAMENODE". En resumen, en el "core-site" se pone básicamente el
-puerto y el tipo de sistema de archivos.
+maestro que va a contener los datos (será nuestra maquina 'localhost'), que se suele llamar "NAMENODE". En resumen, en el 
+"core-site" se pone básicamente el puerto y el tipo de sistema de archivos.
 
 8.- Guardar y cerramos
 
