@@ -79,6 +79,14 @@ Empezaremos con el primer archivo
 						<name>fs.defaultFS</name>
 						<value>hdfs://localhost:9000</value>
 					</property>
+					<property>
+						<name>hadoop.proxyuser.server.hosts</name> 
+						<value>*</value>                        
+					</property>
+					<property>
+						<name>hadoop.proxyuser.server.groups</name> 
+						<value>*</value>			
+					</property>					
 				</configuration>
 
 Esto nos dice que "sistema de archivos vamos a usar para hadoop". Nosotros vamos a utilizar el "standar" que es hdfs://.

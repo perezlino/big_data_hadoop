@@ -7,35 +7,38 @@ Lo podemos encontrar en el sitio https://gethue.com
 COMPILAR E INSTALAR HUE
 =======================
 
-1.- Descargar desde este link --> https://cdn.gethue.com/downloads/hue-4.11.0.tgz <-- Ultima version
+1.- Descargar desde este link --> https://cdn.gethue.com/downloads/hue-4.10.0.tgz <-- Ultima version
 
 2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> cd /home/hadoop/Descargas/
 
-3.- Desde la unica ventana abierta, [hadoop@localhost Descargas] --> tar xvf hue-4.11.0.tgz --> ls -l --> cd hue-4.11.0/
+3.- Desde la unica ventana abierta, [hadoop@localhost Descargas] --> tar xvf hue-4.10.0.tgz --> ls -l --> cd hue-4.10.0/
 
-4.- Desde la unica ventana abierta, [hadoop@localhost hue-4.11.0] --> ls -l
+4.- Desde la unica ventana abierta, [hadoop@localhost hue-4.10.0] --> ls -l
 
-5.- Abro una segunda ventana, [hadoop@localhost hue-4.11.0] --> ls -l
+5.- Abro una segunda ventana, [hadoop@localhost hue-4.10.0] --> ls -l
 
-6.- Desde la ventana 2, [hadoop@localhost hue-4.11.0] --> su - root --> Contraseña:catalina
+6.- Desde la ventana 2, [hadoop@localhost hue-4.10.0] --> su - root --> Contraseña:catalina
 
 7.- Desde la ventana 2, [root@localhost ~] --> Tenemos que ir ejecutando cada linea 1 x 1:
 
 	yum install libffi-devel
 	yum install gmp-devel
 	yum install python-devel mysql-devel
-	yum install ant gcc gcc-c++ rsync krb5-devel mysql openssl-devel cyrus-sasldevel cyrus-sasl-gssapi sqlite-devel openldap-devel python-simplejson
+	yum install ant gcc gcc-c++ rsync krb5-devel mysql openssl-devel cyrus-sasl-devel cyrus-sasl-gssapi sqlite-devel openldap-devel python-simplejson
 	yum install libtidy libxml2-devel libxslt-devel
 	yum install python-devel python-simplejson python-setuptools
 	yum install maven
 
-8.- Desde la ventana 1, [hadoop@localhost hue-4.11.0] --> PREFIX=/opt/hadoop make install
+NO EXISTE NINGUN PAQUETE "libtidy"
+NO EXISTE NINGUN PAQUETE "python-simplejson"
+
+8.- Desde la ventana 1, [hadoop@localhost hue-4.10.0] --> PREFIX=/opt/hadoop make install
 
 -----------------------------------------------------------------------------------------------------------------------
 CONFIGURAR Y ARRANCAR HUE
 =========================
 
-1.- Desde la ventana 1, [hadoop@localhost hue-4.11.0] --> cd /opt/hadoop/hue
+1.- Desde la ventana 1, [hadoop@localhost hue-4.10.0] --> cd /opt/hadoop/hue
 
 2.- Desde la ventana 1, [hadoop@localhost hue] --> ls -l --> cd /desktop
 
@@ -77,6 +80,14 @@ Guardamos y cerramos o :x
 						<name>fs.defaultFS</name>             ----\  No modificamos
 						<value>hdfs://localhost:9000</value>  ----/
 					</property>
+					<property>
+						<name>hadoop.proxyuser.server.hosts</name>  ----\  No modificamos
+						<value>*</value>                            ----/
+					</property>
+					<property>
+						<name>hadoop.proxyuser.server.groups</name>  ----\  No modificamos
+						<value>*</value>			                 ----/
+					</property>							
 					<property>
 						<name>hadoop.proxyuser.hue.hosts</name> ----\ Vamos a activar el 'proxyuser' para hue y para host.
 						<value>*</value>                        ----/ Le estamos diciendo que cualquier 'host' pueda conectarse.

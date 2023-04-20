@@ -23,7 +23,13 @@ Configuramos las variables de entorno
 
 8.- Desde la unica ventana abierta, [hadoop@localhost hive] --> ls -l --> ls bin --> cd conf
 
-9.- Desde la unica ventana abierta, [hadoop@localhost conf] --> ls -l --> gedit hive-env.sh --> Se abre un block de notas --> Modificamos lo sgte:
+9.- Desde la unica ventana abierta, [hadoop@localhost conf] --> cp hive-default.xml.template hive-site.xml
+																cp hive-env.sh.template hive-env.sh
+																cp hive-exec-log4j2.properties.template hive-exec-log4j2.properties
+																cp hive-log4j2.properties.template hive-log4j2.properties	
+																cp beeline-log4j2.properties.template beeline-log4j2.properties
+
+10.- Desde la unica ventana abierta, [hadoop@localhost conf] --> ls -l --> gedit hive-env.sh --> Se abre un block de notas --> Modificamos lo sgte:
 												# SET HADOOP_HOME to point to a specific hadoop install directory
 												# HADOOP HOME=${bin}/../../hadoop
 												export HADOOP_HOME=/opt/hadoop <------ Agregamos esta linea
@@ -38,6 +44,10 @@ CONFIGURAR HDFS PARA USAR HIVE
 ==============================
 
 Debemos crear 2 directorios en HDFS, que van a ser el sitio donde por defecto Hive va a trabajar:
+
+(No estoy seguro si 'yarn' es necesario, pero igual lo inicio)
+Debemos iniciar 'dfs' y 'yarn' antes de utilizar los comandos 'hdfs': start-dfs.sh  
+								                                      start-yarn.sh
 
 1.- Desde la unica ventana abierta, [hadoop@localhost conf] -->	hdfs dfs -mkdir /tmp (quizás ya lo tengamos creado)
 
@@ -82,7 +92,30 @@ Lo que hacemos es inicializar el esquema para la base de datos correspondiente. 
 Derby con la que trabajar.
 5.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> schematool -dbType derby -initSchema									
 
-6.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> ls -l --> hive --> Y entramos al entorno de Hive
+6.- En el caso que aparezca el error "Class path contains multiple SLF4J bindings":
+
+    - Accede /opt/hadoop/share/hadoop/common/lib y comprueba que versión tiene guava.jar
+
+    - Accede a /opt/hadoop/hive/lib y compara la versión de guava.jar. Si no son las mismas, 
+      borra la más antigua y copia la más moderna en los dos sitios.
+
+    - Por otro lado, puede que tengamos que modificar el archivo "hive-site.xml", la linea 3220
+      No reconoce ciertos caracteres. Leer si nos dice "Error Caused by" y nos habla de este 
+      archivo y el numero de linea.
+
+    - Vuelve a ejecutar el comando --> schematool -dbType derby -initSchema
+
+7.- Antes de ejecutar HIVE debemos asegurarnos de que 'dfs' y 'yarn' estan inicializamos: start-dfs.sh
+										      											  start-yarn.sh									
+
+8.- Desde la unica ventana abierta, [hadoop@localhost bbdd] --> ls -l --> hive --> Y entramos al entorno de Hive
+
+Podemos crear una base de datos
+9.- hive> CREATE DATABASE ejemplo;
+
+10.- Desde el navegador --> https://localhost:9870 --> Utilities --> Browse the file system --> Podemos revisar nuestras bd y tablas
+
+11.- Para salir de hive> pulsamos CTRL + D
 
 -----------------------------------------------------------------------------------------------------------------------
 CONEXIONES REMOTAS - HIVESERVER2 Y BEELINE
