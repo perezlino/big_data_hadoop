@@ -1,0 +1,1 @@
+rpm -qa | grep sqlite --> Busca los paquetes instalados de 'sqlite'. Podemos reemplazarlo por 'python', por ejemplo.
