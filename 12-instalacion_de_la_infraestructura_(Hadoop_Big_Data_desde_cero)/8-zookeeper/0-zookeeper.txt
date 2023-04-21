@@ -1,0 +1,335 @@
+INTRODUCCIÓN A ZOOKEEPER
+========================
+
+Zookeeper es un es un software que nos permite tener un servicio centralizado, una gestión centralizada y coordinada de entornos distribuidos, 
+no sólo de Hadoop, de hecho, Zookeeper es un producto que lleva mucho tiempo, digamos funcionando y, de hecho, es anterior a Hadoop. Lo que 
+pasa es que su funcionalidad le hace muy útil dentro de Hadoop Big Data. Con Zookeeper podemos: 
+
+- Gestionar una configuración centralizada de un entorno distribuido
+- Podemos sincronizar, por ejemplo, transacciones o configuraciones.
+- Podemos mantener una gestión de nombres 
+- Podemos agrupar y mantener servicios de forma común, es decir, todo aquello que se supone que debe de tener un entorno distribuido, de 
+  procesamiento distribuido, Zookeeper es el producto más adecuado. En vez de tener que preocuparnos de hacerlo, Zookeeper nos ofrece la 
+  posibilidad de implementarlo de manera directa. Entonces, lo que tenemos es un conjunto, de digámosle 'primitivas', vamos a llamarlo de 
+  'variables', aunque el nombre no es muy afortunado, que está basado en una estructura jerárquica similar a la orden de directorios y con 
+  el que podemos mantener una configuración centralizada y una gestión centralizada.
+- Es un componente que funciona en Java. 
+- Mantiene como una estructura centralizada a nivel jerárquico en la cual nosotros podemos poner un poco lo que queramos. ¿A qué me refiero?
+  Bueno pues, Zookeeper puede ser utilizado por múltiples productos y lo que van a hacer esos productos es mantener dentro de esta estructura 
+  jerárquica su propia configuración y su propio entorno. Entonces Hadoop lo utilizará a su manera, por ejemplo, otro producto que utiliza 
+  Zookeeper es 'SolR'. Hay distintos productos en el mercado que utilizan ZooKeeper para trabajar de esta forma. Entonces todos estos espacios 
+  de nombres o 'Namespaces', espacios de nombres que están funcionando dentro de Zookeeper, se conocen como 'ZNODES' Zookeeper nodes. Y como 
+  les digo son nodos que van manteniendo una nomenclatura que permite que los distintos servicios que estén dentro del mismo funcionan de manera 
+  cooperativa. Luego lo veremos con más detalle evidentemente orientado a Hadoop.
+- Una cosa muy importante es que Zookeeper trabaja en memoria, al contrario que otros productos que trabajan con una estructura en disco, Zookeeper 
+  mantiene todo en memoria. 
+- Y sobre todo está muy orientado a grandes sistemas distribuido donde el rendimiento es muy importante.
+
+Entonces, ¿cómo funciona en realidad Zookeeper?
+
+Bueno si se dan cuenta, vamos a tener un conjunto de servidores hiper distribuidos a lo largo de nuestro Cluster. Estos van a mantener, una 
+estructura a partir de esa estructura jerárquica de una nomenclatura jerárquica exactamente igual en todos los nodos, que se van a ir copiando
+las cosas, de manera que una cosa que se produce en un servidor es automáticamente replicado, distribuido, al resto. Entre todos los Zookeeper 
+que tengamos en un cluster se elige un líder. Hay uno que es, el 'maestro' no es una palabra adecuada porque esto no es un entorno 
+maestro-esclavo, todos tienen un poco el mismo peso pero se elige el líder, el punto de gestión centralizada. Si se cae este servidor no pasa 
+nada, automáticamente otro de los servidores que hay dentro del Cluster se convierte en el líder. Y por lo tanto, el cliente lo que hace es 
+conectarse a un servidor, hacer lo que tenga que hacer y el Servicio Distribuido va a permitir mantener una réplica común en todos. Por 
+ejemplo, en el caso de Hadoop lo que vamos a conseguir con esto es que la configuración la vamos a poder tener centralizada en vez de tener que 
+tenerla en cada directorio como hemos ido haciendo a lo largo del curso, si recuerdan que cada vez que tocábamos en algún sitio, teníamos que 
+copiar la configuración al resto de máquinas. Lo cual es un poco engorroso y además a veces nos puede llevar a errores. En este caso, lo que 
+podemos conseguir con esto es mantener esa información de manera centralizada, más que centralizada 'orquestada', sincronizada entre todos los 
+servidores. Un entorno ZK suele contar de tres servidores, habitualmente con estos suelen ser suficientes para mantener la mayor parte de los 
+Cluster. Hay que tener en cuenta, que tu puedas creer que son pocos, pero en realidad los servidores lo que mantienen es gestión de información 
+y de configuración centralizada, no tienen datos como tal o sea no manejan los datos de los servidores y, por lo tanto, la información que 
+mantienen no es excesivamente grande en memoria. Cada operación que realizan la etiquetan con un ZX ID, es decir, con un ID de transacción lo 
+que permite mantener una política común en todos los servicios que ofrece Zookeeper. Ya veremos que los nodos Zookeeper normalmente van en 
+número impar 3, 5, 7 nodos, porque siempre funcionan con la mayoría. Es decir, que si yo tengo tres servidores ZooKeeper, siempre para que 
+el Cluster funcione, para que el cluster de Zookeeper funcione, debemos de tener la mitad más uno, entonces, en el caso de tres sería, tendríamos
+que tener la mitad sería uno y medio y como tenemos que tener uno más pues tendríamos que tener al menos dos servidores. En el caso de 5 lo mismo, 
+en el caso de 7 lo mismo vale, entonces siempre va a ser una mayoría de servidores para que funcione.
+Nosotros nos vamos a enfocar a cómo lo podemos utilizar dentro de nuestro cluster Hadoop ¿para qué? Para mantener la 'alta disponibilidad' de 
+manera que cuando uno de los nodos se caiga, dentro de los nodos maestros me refiero, automáticamente otro entre en marcha.
+
+-----------------------------------------------------------------------------------------------------------------------
+INSTALACIÓN ZOOKEEPER
+=====================
+
+1.- Descargamos Apache Zookeeper --> https://zookeeper.apache.org/releases.html#download --> apache-zookeeper-3.7.1.tar.gz
+
+2.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> cd /opt/hadoop/
+
+3.- Abrimos la unica ventana abierta, [hadoop@localhost hadoop] --> tar xvf /home/hadoop/Descargas/apache-zookeeper-3.7.1.tar.gz
+
+4.- Abrimos la unica ventana abierta, [hadoop@localhost hadoop] --> ls -l --> mv apache-zookeeper-3.7.1 zoo --> ls -l
+
+Esta parte tenemos que repetirla en todos los nodos donde vamos a utilizar ZooKeeper. Al menos debemos tener 3 nodos ZooKeeper.
+5.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> pwd --> /opt/hadoop/zoo --> ls -l
+
+Copiamos todo lo que hay en la ruta "/opt/hadoop/zoo" del nodo 1 (localhost - nodo maestro) al nodo 2 (maquina 2 - localhost2 - nodo esclavo)
+6.- Abrimos la unica ventana abierta, [hadoop@localhost hadoop] --> scp -r zoo localhost2:/opt/hadoop
+
+Copiamos todo lo que hay en la ruta "/opt/hadoop/zoo" del nodo 1 (localhost - nodo maestro) al nodo 3 (maquina 3 - localhost3 - nodo esclavo)
+7.- Abrimos la unica ventana abierta, [hadoop@localhost hadoop] --> scp -r zoo localhost3:/opt/hadoop
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURACIÓN DE ZOOKEEPER
+==========================
+
+- 3 SERVIDORES a configurar
+- Debemos crear un archivo denominado 'zoo.cfg'
+- Debemos tener un directorio donde pueda dejar la información que gestiona
+
+Bueno lo primero que tenemos que tener en cuenta es que durante el curso vamos a configurar tres servidores Zookeeper, es el mínimo que 
+tenemos que tener. Estos tres servidores Zookeeper, que en nuestro caso vamos a coger el nodo 1 (localhost), el nodo 2 (localhost2) y el 
+nodo 3 (localhost3) se denominan 'Quorum' a un conjunto de servidores replicados. Hay que tener en cuenta que estos tres servidores van 
+a mantener, en el caso que nos ocupa en este curso, la configuración de Hadoop. Entonces, los tres van a tener que ser gestionados o 
+manejados de la misma manera. Estos tres servidores Zookeeper van a tener asociados un archivo de configuración que se suele llamar así 
+'zoo.cfg' aunque no es necesario, pero se suele llamar así. Además vamos a tener que tener un directorio '/datos/zoo/' en cada máquina 
+en el cual se van a guardar snapshots, locks y otra serie de cosas que necesita Zookeeper. Pues como se comentó antes, aunque, trabaja en 
+memoria, también tiene que dejar de vez en cuando cosas en algún sitio. Nosotros vamos a utilizar el mismo directorio que estamos 
+utilizando para los 'namenode' y los 'datanode'. No es lo más adecuado pero dado digamos un poco las máquinas que estamos utilizando 
+pues nos puede valer perfectamente. Además este archivo es bastante bastante sencillito. Luego hay que tener en cuenta que estas máquinas 
+se escuchan entre sí por por dos puertos: 2888:3888. Estos son los estándar, no tienen porqué ser los mismos, pero bueno digamos que salvo 
+que tengas algo en contra, nuevamente se ponen aquí. El '2888' se suele utilizar para las conexiones entre ellos, es decir, para pasarse 
+los ¿...?, por ejemplo, si se modifica un archivo en algun nodo, pues, automáticamente sincronizar ese archivo con el resto y normalmente 
+el '3888' sirve para determinar el líder. Se utilizan dos puertos distintos porque uno es para gestión y el otro es para configuración. 
+Digamos, tienen dos funcionalidades distintas. Ahora veremos que todo esto que se está comentando se configura en el archivo de configuración
+'zoo.cfg'. Y por último, los clientes de Zookeeper se conectan a través del puerto '2181', de la misma forma que se ha comentado, es totalmente 
+opcional y podemos poner otro cualquiera. 
+
+1.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> cd /opt/hadoop/zoo
+
+2.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> ls -l --> cd bin 
+
+3.- Abrimos la unica ventana abierta, [hadoop@localhost bin] --> ls -l --> cd ..
+
+4.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> ls -l --> cd conf
+
+5.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> pwd --> /opt/hadooop/zoo/conf --> ls -l --> 
+									Es probable que no tengamos el archivo 'zoo.cfg'
+									y tengamos el archivo 'zoo_sample.cfg', entonces
+									lo que hacemos es
+									--> cp zoo_sample.cfg zoo.cfg
+
+Este archivo tiene una serie de parametros de propiedades que podemos utilizar para configurar nuestro Zookeeper.
+Ni que decir tiene, que normalmente este archivo de configuración tiene que ser igual en el resto de los nodos
+ZooKeeper para mantener una sincronización de la infraestructura.
+6.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> gedit zoo.cfg --> Se abre un block de notas y añadimos las siguientes lineas:
+
+	# the directory where the snapshot is stored.
+	# do not use /tmp for storage, /tmp here is just 
+	# example sakes.
+	dataDir=/datos/zoo                                  <-------------
+	# the port at which the clients will connect
+	clientPort=2181                                     <-------------
+	# the maximum number of client connections.
+	# increase this if you need to handle more clients
+	#maxClientCnxns=60
+	#
+	# Be sure to read the maintenance section of the 
+	# administrator guide before turning on autopurge.
+	#
+	# http://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_maintenance
+	#
+	# The number of snapshots to retain in dataDir
+	#autopurge.snapRetainCount=3
+	# Purge task interval in hours
+	# Set to "0" to disable auto purge feature
+	#autopurge.purgeInterval=1
+	server.1=localhost:2888:3888                        <-------------
+	server.2=localhost2:2888:3888                       <-------------
+	server.3=localhost3:2888:3888                       <-------------
+
+Guardamos y cerramos o :x
+
+Copiamos el archivo de configuración a los dos nodos restantes
+7.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> scp zoo.cfg localhost2:/opt/hadoop/zoo/conf/															      						
+
+8.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> scp zoo.cfg localhost3:/opt/hadoop/zoo/conf/	
+
+Creamos el directorio con el que vamos a trabajar en los 3 nodos
+9.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> mkdir /datos/zoo
+
+10.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> ssh localhost2 mkdir /datos/zoo
+
+11.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> ssh localhost3 mkdir /datos/zoo
+
+-----------------------------------------------------------------------------------------------------------------------
+ARRANCAR ZOOKEEPER Y COMPROBAR
+==============================
+
+1.- Abrimos la unica ventana abierta, [hadoop@localhost conf] --> cd /datos/zoo
+
+¿Por qué un 1? Por que lo que hace Zookeeper es identificar los servidores mediante este archivo. ¿Qué quiere decir eso? que
+tendremos que poner en cada uno de los servidores un archivo llamado 'myid' con el numero de servidor, es decir, que en el nodo 2
+(localhost2) tendria que poner un 2 y en el nodo 3 (localhost3) tendria que poner un 3. Esto no lleva relación por el número que
+nosotros le di a mis nodos, por ejemplo, si estuviemos trabajando con el nodo 1, nodo 7 y nodo 24, tendriamos que hacer lo mismo,
+asignarles el numero 1, 2 y 3.
+2.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> echo 1 > myid --> cat myid
+
+3.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> ssh localhost2
+
+4.- Abrimos la unica ventana abierta, [hadoop@localhost2 ~] --> echo 2 > /datos/zoo/myid --> exit
+
+5.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> ssh localhost3
+
+6.- Abrimos la unica ventana abierta, [hadoop@localhost2 ~] --> echo 3 > /datos/zoo/myid --> exit
+
+7.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> cd
+
+8.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> pwd --> /home/hadoop
+
+Tenemos que actualizar este archivo con el PATH de Zookeeper.
+7.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> gedit /home/hadoop/.bashrc --> se abre un block de notas y 
+												añadimos la siguiente linea:
+		
+		export HADOOP_HOME=/opt/hadoop
+		export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+		export HIVE_HOME=/opt/hadoop/hive
+		export ZOOKEEPER_HOME=/opt/hadoop/zoo
+		export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HIVE_HOME/bin:$ZOOKEEPER_HOME/bin
+
+Guardamos y cerramos o :x
+
+Copiamos el archivo al nodo 2 (localhost2)
+8.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> scp /home/hadoop/.bashrc localhost2:/home/hadoop  
+
+9.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> scp /home/hadoop/.bashrc localhost3:/home/hadoop  
+
+Ahora cada vez que entremos a un terminal, pues, ya tendriamos el directorio bien apuntando. En este caso si hacemos
+esto, estamos cargando las variables de entorno:
+10.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> . /home/hadoop/.bashrc
+
+Este archivo nos permite ejecutar distintas operaciones sobre el servidor Zookeeper. Cuidado, siempre pensando que estamos con un 
+solo servidor, vale decir, para arrancar el servidor 2 tendríamos que irnos al nodo 2 y para arrancar el servidor 3 tendríamos que 
+irnos al nodo 3.
+11.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> zkServer.sh
+
+12.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> zkServer.sh start
+
+Al ejecutarlo posiblemente nos diga que no está ejecutandose. En realidad esto no es muy fiable porque hay 
+que tener en cuenta que si no tenemos el Quorum de Zookeeper, es decir, al menos dos servidores, él va a 
+considerar que no está funcionando el Cluster.
+13.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> zkServer.sh status
+
+Aqui podemos ver un archivo llamado 'QuorumPeerMain' ese es en realidad el ZooKeeper. Podemos ver que está
+funcionando. Pero con el otro comando nos dice que no lo está, esto porque no hemos arrancado 2 nodos al
+menos. Recordar, en un Zookeeper tiene que existir mayoria de nodos, lo que se llama 'Quorum', si hemos
+configurado en el archivo de configuración 3 nodos, debemos tener al menos 2 funcionando y como ahora tenemos
+1, por ahora el Cluster no está activo, por eso me dice que no se está ejecutandose.
+14.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> ps -ef | grep Qu
+
+Nos vamos al nodo 2
+13.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> ssh localhost2
+
+14.- Abrimos la unica ventana abierta, [hadoop@localhost2 ~] --> zkServer.sh start
+
+Nos devuelve que su 'Mode: leader'. Aqui ya no devuelve un mensaje de que no seestá ejecutando, porque ya
+hay dos nodos funcionando.
+15.- Abrimos la unica ventana abierta, [hadoop@localhost2 ~] --> zkServer.sh status --> exit
+
+Nos devuelve que su 'Mode: follower'. Normalmente, aunque no siempre 100% seguro, cuando arranca el segundo nodo 
+se suele convertir en el "líder" y el nodo 1 (localhost) que es el que ha iniciado, se suele poner como "follower" 
+esto tampoco es indicativo, se puede cambiar perfectamente.
+16.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> zkServer.sh status --> ssh localhost3
+
+17.- Abrimos la unica ventana abierta, [hadoop@localhost3 ~] --> zkServer.sh start
+
+Nos devuelve que su 'Mode: follower'.
+18.- Abrimos la unica ventana abierta, [hadoop@localhost3 ~] --> zkServer.sh status --> exit
+
+19.- Abrimos la unica ventana abierta, [hadoop@localhost ~] --> cd /datos/zoo/
+
+20.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> ls -l  --> Vemos que en este directorio ya
+									     va dejando sus cosas
+
+21.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> jps --> Podemos ver que ahora tenemos un 
+                                                                          'QuorumPeerMain', que es el como 
+									   denomina a Zookeeper.  
+
+-----------------------------------------------------------------------------------------------------------------------
+CLIENTE ZOOKEEPER: zkCli
+========================
+
+Hay un pequeño cliente que se llama "zkCli" que nos permite conectarnos a nuestros servidores ZooKeeper. Entonces, recordar que 
+el servidor ZooKeeper, en realidad es un Cluster ZooKeeper, como vale para muchas cosas, para muchos productos. Digamos que cuando 
+yo lo arranco está vacío, no tiene nada, no sabe qué hacer, porque, luego se tiene que adaptar a cada producto. Nosotros en los 
+capítulos próximos vamos a verlo cómo podemos utilizarlo para tener alta disponibilidad en Hadoop con HDFS y con Yarn. Y serán 
+esos dos componentes HDFS y Yarn los que alimenten, los que rellenen la información en el servidor de Zookeeper para poder hacer 
+esa tarea. Pero si yo utilizo otro producto que utiliza Zookeeper la información que pueda generar es muy distinta.
+
+Para ver un pequeño ejemplo de esto, que estamos hablando, el "zkCli" nos permite conectarnos a un servidor en remoto para poder 
+hacer algún tipo de operación.
+
+1.- Abrimos la unica ventana abierta, [hadoop@localhost zoo] --> zkCli.sh -server localhost:2181 --> Ingresamos
+
+2.- [zk: localhost:2181{CONNECTED} 0] --> help --> Podemos ver una lista de comandos que podemos utilizar
+
+Recordar que habiamos dicho que existian unas cosas que se llamaban ZNODES en una forma de estructura jerárquica como una especie 
+de estructura de directorios. Entonces, dentro de Zookeeper nosotros podemos ir configurando esta información para trabajar entonces
+cómo no se trata de una estructura jerárquica, si yo hago esto: 
+
+3.- [zk: localhost:2181{CONNECTED} 1] --> ls / --> [zookeeper]
+
+Me daría la información necesaria. Entonces, por ejemplo, para poder poner la alta disponibilidad en Hadoop, Yarn y en HDFS, lo que 
+va a hacer Hadoop es poner aqui cosas, crear una estructura de directorios para hacer eso. Ahora como puedes ver esta Virgen 
+totalmente, no tiene nada. De hecho, nosotros podríamos crear lo que se llamaba ZNODE, uno de los nodos dentro de aquí. Por ejemplo, 
+si colocamos "m1" y un valor dentro "v1", acabo de crear lo que se llamaría un ZNODE que es como una especie de directorio:
+
+4.- [zk: localhost:2181{CONNECTED} 2] --> create /m1 v1 --> ls / --> [zookeeper, m1] --> ls /m1 --> [] --> get /m1 --> v1
+
+5.- [zk: localhost:2181{CONNECTED} 3] --> create /m2 v2 --> ls / --> [zookeeper, m1, m2] --> ls /m2 --> [] --> get /m2 --> v2
+
+Y asi podriamos seguir haciendo la configuración. Por ahora pensar, que lo que hacen estos productos es guardar aquí una 
+estructura en forma de directorio, de estructura jerárquica de directorios, determinados datos que luego le valen a ese 
+producto para hacer, por ejemplo, en el caso de YARN o de HDFS, la alta disponibilidad. 
+
+6.- Abro una nueva ventana, [hadoop@localhost zoo] --> ssh localhost2
+
+7.- Abro una nueva ventana, [hadoop@localhost zoo] --> zkCli.sh
+
+No hemos puesto el puerto ni nada, porque, si no se lo cambio no tengo por que andar poniéndoselo hago aquí un:
+
+8.- [zk: localhost:2181{CONNECTED} 0] --> ls / --> [zookeeper, m1, m2]
+
+En el nodo 2 (localhost) aparecen sin problemas todo lo que vayamos creando en cualquiera de los nodos porque
+lo que hace es sincronizarlo automáticamente. Entonces, si yo le digo que me diga m2 pues me debe dar la misma
+información:
+
+9.- [zk: localhost:2181{CONNECTED} 1] --> get /m2 --> v2
+
+Esto en esto se basa Zookeeper y, por lo tanto, cuando Yarn vaya a dejar cualquier cosa aquí la configuración 
+será replicada automáticamente en el resto de los nodos Zookeeper, con lo cual, si uno de los nodos se cae de 
+los maestros, el otro, el pasivo pasa a formar parte del trabajo sin problemas. Y de hecho, desde aquí vamos 
+a hacer un delete, vamos a borrar la información que tenemos en 'm2', la información que tenemos en 'm1' con 
+lo cual ahora esta vacío:
+
+10.- [zk: localhost:2181{CONNECTED} 2] --> delete /m2 --> delete /m1 --> ls / --> [zookeeper]
+
+Si ejecutamos, cuando se sincronice tampoco vamos a tener nada.
+11.- Regreso a la ventana 1, [zk: localhost:2181{CONNECTED} 4] --> ls / --> [zookeeper]
+
+-----------------------------------------------------------------------------------------------------------------------
+CONFIGURAR ALTA DISPONIBILIDAD EN HDFS
+======================================
+
+1.- Abrimos la unica ventana abierta, [hadoop@localhost ~] -->
+
+
+
+-----------------------------------------------------------------------------------------------------------------------
+ARRANCAR HDFS EN ALTA DISPONIBILIDAD
+====================================
+
+
+
+
+-----------------------------------------------------------------------------------------------------------------------
+COMPROBAR QUE EL CLUSTER HDFS FUNCIONA
+======================================
+
+
+
+
+
+-----------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,19 @@
+
+<configuration>
+
+<property>
+  <name>hbase.cluster.distributed</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>hbase.rootdir</name>
+  <value>hdfs://nodo1:9000/hbase</value>
+</property>
+
+<property>
+  <name>hbase.zookeeper.quorum</name>
+  <value>nodo1,nodo2,nodo3</value>
+</property>
+
+</configuration>

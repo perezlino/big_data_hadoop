@@ -4,6 +4,7 @@ PASOS PARA TRABAJAR EN HADOOP
 Interfaz gráfica de Hadoop (del Namenode (Nodo Maestro)) --> https://localhost:9870 --> Utilities --> Browse the file system
 Interfaz gráfica del ResourceManager --> https://localhost:8088
 Interfaz gráfica de Hue --> https://localhost:8888 --> Usuario:localhost y Contraseña:catalina
+Interfaz gráfica de Apache Zeppelin --> https://localhost:8080
 
 ARRANCAR HDFS
 -------------
@@ -27,4 +28,11 @@ ARRANCAR HUE
 
 7.- Y desde esa ruta ejecutar este comando --> ./supervisor -d --> Este es el comando que necesito para arrancar 'HUE'
 
-8.- Ingresar a la interfaz gráfica                                            
+8.- Ingresar a la interfaz gráfica               
+
+ARRANCAR ZEPPELIN
+-----------------
+9.- Desde esa ruta --> cd /opt/hadoop/zeppelin/bin --> ejecutar este comando --> ./zeppelin-daemon.sh start
+
+10.- Usuario: admin  
+     Contraseña: admin

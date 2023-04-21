@@ -1,0 +1,241 @@
+DESCARGA E INSTALACIÓN DE SPARK
+===============================
+
+• Podemos descargar Spark desde la página web
+• Podemos hacer una instalación con Hadoop pre-empaquetado
+• También podemos descargar un binario sin Hadoop para usarlo con un hadoop de forma independiente
+• También podemos descargar e instalar con Maven o con PyPi
+• Se puede usar en Windows, Unix y Mac
+• Podemos ejecutarlo de forma local en una máquina para empezar a probar. El único requesito es tener 
+  JAVA.
+• Se necesita Java 8+, Python 2.7+/3.4+ y R 3.1+.
+• Para Scala API, Spark 2.3.0, la última versión, se usa Scala 2.11
+• Podemos instalarlo en un entorno de Cluster o Standalone
+• Despliegues soportados en la version 2.3
+   - Amazon EC2: scripts que permiten montar un Cluster EC2 en 5 minutos
+   - Standalone: cluster standalone sin necesitar un cluster manager
+   - Mesos: despliegue en Apache Mesos
+   - YARN: despliegue en Hadoop
+   - Kubernetes: despliegue en esta infraestructura
+                              
+1.- Nos dirigimos al sitio --> https://spark.apache.org/downloads.html
+                           
+	Download Apache Spark™
+	Choose a Spark release: 3.2.4 (Apr 13 2023)                        <---
+	Choose a package type: Pre-built with user-provided Apache Hadoop  <---
+	Download Spark: spark-3.2.4-bin-without-hadoop.tgz                 <---
+
+2.- Descargamos --> https://dlcdn.apache.org/spark/spark-3.2.4/spark-3.2.4-bin-without-hadoop.tgz
+
+----------------------------------------------------------------------------------------------------------------
+ARQUITECTURA DE PROCESOS DE SPARK					 
+=================================                                        ___________________
+           _____________________________________________________        | Worker Node	    |		    ______ 
+	      |							                            |	    | _________________ |-------\  | RDD  |
+ _________|_________						                    '------->|Executor |Cache| ||-------/  | HDFS |	
+|  Driver | Program |						                    .------>||         '-----' ||	       '------'  
+| ________|________ |             ___________________		    |	    ||.------. .------.||
+||		           ||		     |                   |		    |	    ||| Task | | Task |||
+||  SparkContext   |<----------->|  Cluster Manager  |----------|       ||'------' '------'||
+||_________________||		     |___________________|		    |       ||_________________||
+|_________|_________|											|		|______________˄____|
+	      | 													|		    		   | 
+          |		   												|		       		   |	
+	      |														|	 	 ______________|____
+	      |	                                              	  	|      	| Worker Node  |    |		    ______ 
+	      | 													|   	| _____________˅ __ |-------\  | RDD  |
+ 	      |												        '------>||Executor |Cache| ||-------/  | HDFS |	
+	      |																||         '-----' ||	       '------'  
+	      '------------------------------------------------------------->|.------. .------.||
+																		||| Task | | Task |||
+								        								||'------' '------'||
+								        								||_________________||
+																		|___________________|
+
+En esta lección vamos a ver cómo podemos montar nuestro primer entorno Spark con lo que se denomina un Clúster STANDALONE 
+independiente. Pero antes de ello, me gustaría reflejar aquí de una manera sencilla cómo funciona Spark a nivel de 
+procesos. Entonces aquí tenemos un poco todos los componentes que funcionan independientemente del clúster con el que 
+vayamos a trabajar, del tipo de Clúster donde vayamos a desplegar nuestro Spark. Entonces, una aplicación Spark no es nada 
+más que un conjunto de procesos que se van a lanzar dentro de un Clúster y que van a ser coordinados por este proceso, 
+este componente llamado 'SparkContext', también denominado 'Driver Program'. Este componente, el denominado SparkContext 
+se conecta al gestor del Clúster, al 'Clúster Manager', sea el que sea, Mesos, Hadoop, un Clúster independiente, un poco 
+los que hemos visto como posibles opciones en el capítulo anterior en esta versión. Entonces una vez que SparkContext se 
+conecta es al Clúster, en cada uno de los nodos o los nodos que sea necesario, va a reservar un espacio, un componente 
+denominado el 'Executor'. El 'Executor' es el proceso al cual se va a enviar la aplicación o bien la aplicación Java o
+en Python o en Scala, que va a ser la que se va a ejecutar.. Este componente 'Executor' va a levantar o va a usar, por 
+así decirlo, varias tareas, varias 'tasks' que se van a lanzar dentro de cada nodo, también podemos ver que se utiliza 
+una parte de 'caché', de memoria, sobre todo porque ya hemos comentado que Spark es un ejecutor de procesos in-memory, 
+sobre todo que es donde realmente adquiere su relevancia y su velocidad. Entonces vemos que cada 'Worker Node' tendrá 
+'Executor' y cada 'Executor' tendrá distintas tareas que realizarán esos procesos que se están lanzando desde la 
+aplicación Java, Python o Scala. Y por supuesto, ni que decir tiene que a la hora de acceder a los datos podremos acceder 
+o bien a HDFS o bien a los datasets del propio Spark. Bueno, esta arquitectura de procesos es agnóstica con respecto al 
+Clúster donde lo queramos desplegar, mientras Spark pueda lanzar aquí una 'Executor' y poder empezar a coordinar los 
+trabajos, las tareas, en principio, podemos lanzarlo sobre Apache Hadoop, sobre Apache Mesos, en Standalone, etc.
+
+Bueno vamos a ver un ejemplo de cómo podemos montar nuestro primer ejercicio de Spark dentro de un Clúster de tipo 
+STANDALONE, del propio Spark.
+
+----------------------------------------------------------------------------------------------------------------
+INSTALAR SPARK
+==============
+
+1.- Desde la unica ventana abierta, [hadoop@localhost ~] --> cd /opt/hadoop/
+
+2.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> tar xvf /home/hadoop/Descargas/spark-3.2.4-bin-without-hadoop.tgz
+
+3.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> mv spark-3.2.4-bin-without-hadoop/ spark
+
+4.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> ls -l --> cd spark
+
+5.- Desde la unica ventana abierta, [hadoop@localhost spark] --> ls -l --> cd
+
+6.- Desde la unica ventana abierta, [hadoop@localhost ~] --> gedit .bashrc --> se abre un block de notas y añadimos:
+
+                        export HADOOP_HOME=/opt/hadoop
+                        export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+                        export HIVE_HOME=/opt/hadoop/hive
+			            export SPARK_HOME=/opt/hadoop/spark
+                        export ZEPPELIN_HOME=/opt/hadoop/zeppelin
+                        export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HIVE_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/sbin
+			            export SPARK_DIST_CLASSPATH=$(hadoop classpath)
+
+----------------------------------------------------------------------------------------------------------------
+PROBAR QUE SPARK FUNCIONA - MODO CLIENTE
+========================================
+
+Lo que vamos a ver en este capítulo es cómo comprobar que nuestro Spark está funcionando. Todavía no lo vamos a 
+unir a un Cluster ni lo vamos a arrancar en modo 'Standalone', que lo veremos posteriormente, sino, que sólo vamos 
+a ver un par de herramientas que nos permitan, por un lado, probar si el entorno de Spark funciona y segundo y muy 
+importante, nos permiten también hacer pruebas con el lenguaje sin necesidad de tener un entorno en Clúster. Les 
+viene muy bien sobretodo para la gente de desarrollo o si queremos hacer algún tipo de test:
+
+Estas herramientas se encuentran en el directorio 'bin' de Spark:
+1.- Desde la unica ventana abierta, [hadoop@localhost ~] --> cd /opt/hadoop/spark/bin
+
+2.- Desde la unica ventana abierta, [hadoop@localhost bin] --> ls -l
+
+    spark-shell --> nos permite probar comandos Scala
+    pyspark --> nos permite probar comandos Python
+    sparkR --> nos permite probar comandos R
+    etc ..
+
+3.- Desde la unica ventana abierta, [hadoop@localhost bin] --> spark-shell --> 
+
+4.- scala>  -- > Para salir utilizamos --> :q
+
+4.- Desde la unica ventana abierta, [hadoop@localhost bin] --> pyspark --> 
+
+4.- spark>  --> Para salir utilizamos --> :q
+
+----------------------------------------------------------------------------------------------------------------
+SPARK Y HADOOP - TRABAJAR CON HDFS
+==================================
+
+Se realizaron pequeños ejemplos en los ambientes de prueba:
+
+1.- Desde la unica ventana abierta, [hadoop@localhost bin] --> cd /home/hadoop
+
+2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> gedit .bashrc --> se abre un block de notas y añadimos:
+
+                        export HADOOP_HOME=/opt/hadoop
+                        export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+                        export HIVE_HOME=/opt/hadoop/hive
+						export SPARK_HOME=/opt/hadoop/spark
+                        export ZEPPELIN_HOME=/opt/hadoop/zeppelin
+                        export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HIVE_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/sbin
+						export SPARK_DIST_CLASSPATH=$(hadoop classpath)
+						export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+
+Guardamos y cerramos
+
+3.- Desde una nueva ventana, [hadoop@localhost ~] --> hdfs dfs -mkdir /spark
+
+4.- Desde la ventana 2, [hadoop@localhost ~] --> hdfs dfs -put /tmp/puertos.csv /spark
+
+5.- Desde la ventana 2, [hadoop@localhost ~] --> hdfs dfs -ls /spark
+
+----------------------------------------------------------------------------------------------------------------
+LANZAR UN PROGRAMA SPARK (PYTHON) CONTRA EL CLUSTER
+===================================================
+
+1.- Desde la ventana 2, [hadoop@localhost ~] --> spark-submit --class org.apache.spark.examples.SparkPi --master yarn --deploy-mode cluster
+                                                 --name "aplil" /opt/hadoop/spark/examples/jars/spark-examples_2.11-2.3.0.jar  5
+
+Para lanzar comandos de Spark contra algún Clúster, ya bien sea, el de Hadoop o Mesos o bien en Standalone, que veremos en un capítulo 
+posterior, tenemos que utilizar el comando "spark-submit". En este caso vamos a usar esta clase '--class', porque, ya si bien sea, Scala
+o bien sea Java, tendremos que llamar a una clase, entonces vemos que es "org.apache.spark.examples.SparkPi". Esto en realidad, lo único 
+que hace es llamar a una clase que está dentro de este archivo "spark-examples_2.11-2.3.0.jar", que es el archivo de ejemplos que tenemos 
+incluido dentro de nuestra distribución de Spark. Entonces, lo que hacemos es llamar a un programa que se llama "SparkPi" para calcular 
+el número Pi pasándole una serie de argumentos para que tarde más o menos que nos permite medir el rendimiento. Pero las cláusulas más 
+importantes se encuentran a continuación, "--master yarn". Con esto le estamos diciendo que vamos a ejecutar este comando Spark contra 
+nuestro Cluster Hadoop, contra nuestro Cluster de tipo Yarn. Luego, ponemos "--deploy-mode cluster", esto es importante, porque, sino, de 
+lo contrario intenta trabajar en "modo client" y entonces trabaja en modo local, en la máquina donde lo lanzamos y lo interesante claro es 
+que se ejecute dentro de todos los nodos que tenemos. Luego, "--name" es para poner un nombre que luego podamos reconocer cuando veamos la 
+ejecución del aplicativo y luego el archivo 'jar', el cual contiene el calculo del número Pi. Y el "numero" cuanto mayor sea más tiempo 
+tarda en calcular, más operaciones hace y más puedo probar mi Cluster.
+
+Si lo ejecutamos, luego podemos revisar los resultados de ejecución en la interfaz gráfica del ResourceManager --> https://localhost:8088
+
+----------------------------------------------------------------------------------------------------------------
+LANZAR UN PROGRAMA SPARK (SCALA) CONTRA YARN
+============================================
+
+1.- Desde la ventana 2, [hadoop@localhost ~] --> spark-submit --master yarn --deploy-mode cluster --name "ContarPalabras" /home/hadoop/Descargas/ContarPalabras.py 
+                                                 /practicas/quijote.txt /salida_spark_wc
+
+Indicamos la aplicacion python "ContarPalabras.py", el directorio donde se encuentra el archivo al cual aplicaremos nuestro programa y el
+directorio de salida (este no debe existir o sino devolvera un error). Ambos directorios de inicio y salida deben encontrarse en HDFS. La
+aplicación al parecer no es necesario que se encuentre en HDFS.
+
+Si lo ejecutamos, luego podemos revisar los resultados de ejecución en la interfaz gráfica del ResourceManager --> https://localhost:8088
+
+Podemos revisar el directorio de salida que se encuentra en HDFS
+2.- Desde la ventana 2, [hadoop@localhost ~] --> hdfs dfs -ls /salida_spark_wc
+
+Podemos revisar una de las particiones
+3.- Desde la ventana 2, [hadoop@localhost ~] --> hdfs dfs -cat /salida_spark_wc/part-00000
+
+----------------------------------------------------------------------------------------------------------------
+SPARK EN MODO STANDALONE PARTE 1
+================================
+
+Un Cluster de tipo Spark Standalone viene muy bien sobre todo para entornos de pruebas desarrollos de aplicaciones 
+y testing.
+
+1.- Nos dirigimos al sitio --> https://spark.apache.org/downloads.html
+                           
+	Download Apache Spark™
+	Choose a Spark release: 3.2.4 (Apr 13 2023)                        <---
+	Choose a package type: Pre-built for Apache Hadoop 3.2 and later   <---
+	Download Spark: spark-3.2.4-bin-hadoop3.2.tgz                      <---
+
+2.- Descargamos --> https://dlcdn.apache.org/spark/spark-3.2.4/spark-3.2.4-bin-hadoop3.2.tgz
+
+3.- Desde la unica ventana abierta, [hadoop@localhost ~] --> pwd --> /home/hadoop
+
+4.- Desde la unica ventana abierta, [hadoop@localhost ~] --> mkdir spark_standalone --> cd spark_standalone/
+
+Lo desempaquetamos en un directorio totalmente independiente
+5.- Desde la unica ventana abierta, [hadoop@localhost spark_standalone] --> tar xvf /home/hadoop/Descargas/spark-3.2.4-bin-hadoop3.2.tgz
+
+3.- Desde la unica ventana abierta, [hadoop@localhost spark_standalone] --> mv spark-3.2.4-bin-hadoop3.2/ spark --> cd spark
+
+4.- Desde la unica ventana abierta, [hadoop@localhost spark] --> ls -l --> pwd --> /home/hadoop/spark_standalone/spark
+
+Utilizamos root solo para probar desde otro usuario
+5.- Desde una nueva ventana, [hadoop@localhost spark] --> su - root
+
+6.- Desde la ventana 2, [root@localhost ~] --> cd /home/hadoop/spark_standalone/spark
+
+Debo arrancar maestro y esclavos
+7.- Desde la ventana 2, [root@localhost spark] --> ls sbin --> sbin/start-master.sh
+
+Indicamos por que nodo y puerto está escuchando el maestro
+8.- Desde la ventana 2, [root@localhost spark] --> sbin/start-slave.sh localhost:7077
+
+9.- Desde la ventana 2, [root@localhost spark] --> bin/spark-shell
+
+Realizan un pequeño ejemplo
+10.- scala>
+
+----------------------------------------------------------------------------------------------------------------                                                 

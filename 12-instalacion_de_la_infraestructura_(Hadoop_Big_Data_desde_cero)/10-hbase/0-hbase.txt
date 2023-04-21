@@ -1,0 +1,439 @@
+ARQUITECTURA DE HBASE
+=====================
+
+● Conceptos de Hbase
+
+	Nodo : Un servidor dentro del cluster de HBASE
+	Cluster : Un grupo de servidores trabajando de forma conjunta y coordinados por ciertos nodos
+	Nodo maestro : Nodo que se encarga de la coordinación de las tareas
+	Nodo esclavo : Servidores que ejecutan las tareas
+
+● Arquitectura
+						_____________________
+					       | SERVIDORES MAESTROS |
+					       |_____________________| 								
+			    _______________      _______________      _______________  
+			   | _____________ |    | _____________ |    | _____________ |	
+			   ||  ZOOKEEPER  ||    ||  ZOOKEEPER  ||    ||  ZOOKEEPER  ||
+		           ||_____________||    ||_____________||    ||_____________||
+			   | _____________ |    | _____________ |    | _____________ |
+			   ||   MASTER    ||    ||   MASTER    ||    ||   MASTER    ||
+			   ||_____________||    ||_____________||    ||_____________||
+			   |_______________|    |_______________|    |_______________|	
+
+						_____________________
+					       | SERVIDORES ESCLAVOS |
+					       |_____________________| 
+ _______________      _______________      _______________      _______________      _______________    
+| _____________ |    | _____________ |    | _____________ |    | _____________ |    | _____________ |	
+||   DATANODE  ||    ||   DATANODE  ||    ||   DATANODE  ||    ||  DATANODE   ||    ||  DATANODE   ||
+||_____________||    ||_____________||    ||_____________||    ||_____________||    ||_____________||
+| _____________ |    | _____________ |    | _____________ |    | _____________ |    | _____________ |
+||REGION SERVER||    ||REGION SERVER||    ||REGION SERVER||    ||REGION SERVER||    ||REGION SERVER||
+||_____________||    ||_____________||    ||_____________||    ||_____________||    ||_____________||
+|_______________|    |_______________|    |_______________|    |_______________|    |_______________|			
+
+Veamos con más detalle la arquitectura veremos que tenemos servidores maestros. Los servidores maestros son servidores que se conectan 
+a Zookeeper. Ya hemos hablado de Zookeeper en capítulos anteriores y sabemos que Zookeeper se utiliza en muchas herramientas de Hadoop.
+Vamos a tener un proceso, un daemon, denominado "Master" que va a conectarse a Zookeeper para convertirse en el coordinador de todo el 
+Cluster. En realidad podemos tener distintos maestros de tipo Hbase, pero uno de ellos será el que tomará el control. Normalmente 
+como pasan estas cosas el primero que llega, lo coge, entonces, el primero que vaya a llegar es el primero que al ponerse en contacto 
+con Zookeeper se le nombrará coordinador gestor del Cluster. Entonces vamos a tener un proceso que va a coordinar todos los trabajos 
+de esta base de datos. Y luego vamos a tener "Servidores esclavos", los servidores esclavos están compuestos de distintos recursos
+pero principalmente tenemos el Datanode, evidentemente como estamos hablando de Hadoop, pues tendremos nuestros datos de Hbase, de 
+nuestras tablas Hbase, repartidas por los nodos Hadoop. Y luego tenemos un componente muy especial que se denomina "Region Server", 
+"servidor de regiones" que es realmente el encargado de distribuir y de gestionar la información, los datos que tenemos dentro de 
+nuestras tablas Hbase. 
+
+
+● Arquitectura de Hbase - Cómo funciona esta arquitectura.
+
+En primer lugar tenemos aquí el "Master - Coordinador" el proceso que va a coordinar todo lo necesario durante el cluster de Hbase. 
+Vamos a tener una "Tabla Hbase", el concepto de tabla es similar al de base de datos. Tenemos una tabla donde vamos a guardar los datos 
+La única diferencia es que mientras una base de datos relacional las tablas se guardan en filas y columnas normales, aquí veremos que 
+aunque tenemos también filas y columnas, son un poco más especiales, en realidad, son mapas distribuidos y ordenados parecidos a los Hash 
+de otros lenguajes o a los maps de otros lenguajes. Como comentábamos todos estos datos se van a guardar en HDFS, dentro si seleccionamos
+la forma completa de distribución y no Standalone. Las tablas de Hbase sufren entre comillas una característica que es "Sharding", es decir, 
+se parten por la clave y luego los datos se van repartiendo en lo que se denominan regiones. Cada región se va guardando en algún nodo 
+esclavo, es decir, que la tabla se parte en regiones y estas regiones se guardan en los nodos de datos de Hadoop, en los nuevos esclavos 
+de Hadoop. En cada uno de esos nodos esclavos además del resto de cosas que yo tenga, de datanode, namenode etc.. Voy a tener el 'Region Server', 
+el servidor de region, el 'Region Server' es un proceso que digamos se coordina con el master para gestionar todo lo que guarda dentro de este 
+esclavo, este 'Region server' va a servir a varias regiones y esas regiones pertenecerán a una tabla o varias tablas. Al final lo que hace 
+realmente es coordinar los datos que tiene dentro encargarse de esos datos. Y junto con el resto de region servers y con el master pues tendremos 
+ya digamos definida la arquitectura completa de Hbase. durante el resto del curso de esta sección.
+
+----------------------------------------------------------------------------------------------------------------
+INSTALACIÓN STANDALONE PARTE 1
+==============================
+
+Recordar que 'Standalone' es el metodo de instalacion en el que no vamos a depender ni de Hadoop ni de HDFS.
+
+1.- Descargarmos Hbase desde el siguiente enlace --> https://dlcdn.apache.org/hbase/2.4.17/hbase-2.4.17-bin.tar.gz
+
+2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> cd /opt/hadoop
+
+3.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> tar xvf /home/hadoop/Descargas/hbase-2.4.17-bin.tar.gz
+
+5.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> mv hbase-2.4.17-bin.tar/ hbase --> cd hbase
+
+6.- Desde la unica ventana abierta, [hadoop@localhost hbase] --> ls -l --> pwd --> /home/hadoop/hbase
+
+¿Que significa Standalone en Hbase?
+Significa que todos los procesos necesarios, Region Server, el Master, etc... que mencionamos en el capítulo anterior, se van 
+a ejecutar en una sola máquina virtual, en una JVM. Entonces para poder hacer eso tenemos que guardar los datos en un directorio 
+local, es decir, no podemos utilizar en este momento HDFS.
+
+7.- Desde la unica ventana abierta, [hadoop@localhost hbase] --> cd conf
+
+8.- Desde la unica ventana abierta, [hadoop@localhost conf] --> gedit hbase-site.xml --> Se abrira un block de notas y modificamos:
+
+	<configuration>
+		<property>
+		    <name>hbase.rootdir</name>
+		    <value>file:///opt/hadoop/hbase/data/hbase</value>  <------ No hace falta crear el directorio, se crea automaticamente
+		</property>
+  		<property>
+		    <name>hbase.zookeeper.property.dataDir</name>
+		    <value>/opt/hadoop/hbase/data/zookeeper</value>
+  		</property>
+  		<property>
+		    <name>hbase.unsafe.stream.capability.enforce</name>
+		    <value>false</value>
+  		</property>
+	</configuration>
+
+----------------------------------------------------------------------------------------------------------------
+INSTALACIÓN STANDALONE PARTE 2
+==============================
+
+Para ingresar al sitio de hbase --> https://localhost:16010	
+
+1.- Desde la unica ventana abierta, [hadoop@localhost conf] --> cd ..
+
+2.- Desde la unica ventana abierta, [hadoop@localhost hbase] --> cd bin
+
+3.- Desde la unica ventana abierta, [hadoop@localhost bin] --> ./start-hbase.sh
+
+4.- Desde la unica ventana abierta, [hadoop@localhost bin] --> jps --> Nos devuelve los procesos que se estan ejecutando:
+								       HMaster
+								       Jps
+
+5.- Desde la unica ventana abierta, [hadoop@localhost bin] --> ./hbase shell
+
+6.- hbase(main):001:0>
+
+Probemos creando una tabla
+7.- hbase(main):001:0> create 'prueba','cf'
+
+Listar las tablas
+8.- hbase(main):001:0> list
+
+9.- hbase(main):001:0> disable 'prueba'
+
+10.- hbase(main):001:0> drop 'prueba'
+
+----------------------------------------------------------------------------------------------------------------
+CONCEPTOS DE HBASE
+==================
+
+● Una tabla es un concepto similar a la de las bases de datos tradicionales, pero cambia su implementación
+
+● Cada tabla debe tener una clave "primaria" o "row key". Esto permite ordenar las filas según ese Row Key
+
+● Las columnas de una tabla deben pertenecer a una familia ("Column Family") y demás se pueden crear en
+  cualquier momento al insertar datos.
+
+● Por tanto una Column Family es una coleccioón de columnas
+
+● Column Family
+  - Se crean como parte de la definición de la tabla
+  - Cada columna de una Column Family va prefijada por esa Familia
+    - persona:nombre, persona:dirección
+    - factura:código, factura:precio
+  - Una familia puede tener un número indeterminado de columnas y añadirse en cualquier momento
+  - Todas las columnas de una familia se ordenan y se almacenan juntas
+  - Dentro de una fila, una celda vacía no ocupa espacio, ya que no se llega a crear nada. Por eso se
+    le denomina "sparse"	
+
+● Ejemplo:
+
+● Tabla 'persona' con 2 familias: personal y trabajo
+  - Familia personal con dos columnas: nombre y apellidos
+  - Familia trabajo con 3 columnas: cargo, responsabilidad, salario
+
+● Si lo vemos como una fila (visión lógica)
+  ___________________________________________________________________________________
+ | Row Key o      | 	  Familia personal         | 	     Familia trabajo 	     |
+ | clave primaria |                                |				     |	
+ |----------------|--------------------------------|---------------------------------| 
+ | Juan		  | Personal:nombre="juan"	   |				     |	
+ | Juan           | Personal:apellidos="rodriguez" | 				     |	
+ | Juan		  | 				   | Trabajo:cargo="jefe"	     |	
+ | Juan		  |				   | Trabajo:responsabilidad="mucha" |	
+ | Juan		  |				   | Trabajo:salario=1000	     |
+ |________________|________________________________|_________________________________|
+
+● En realidad, físicamente se guardan a nivel de Familia (visión física)
+● Cada Column Family, cada familia, se guarda independiente 
+  ___________________________________________________________________________________
+ | Row Key o      | 	      Timestamp            | 	     Familia personal 	     |
+ | clave primaria |                                |				     |	
+ |----------------|--------------------------------|---------------------------------| 
+ | Juan		  | t2	   			   | Personal:nombre="juan"          |	
+ | Juan           | t3 				   | Personal:apellidos="rodriguez"  |	
+ |________________|________________________________|_________________________________|
+
+  ___________________________________________________________________________________
+ | Row Key o      | 	      Timestamp            | 	     Familia trabajo 	     |
+ | clave primaria |                                |				     |	
+ |----------------|--------------------------------|---------------------------------| 
+ | Juan		  | t5	   			   | Trabajo:cargo="jefe"            |	
+ | Juan           | t6 				   | Trabajo:responsabilidad="mucha" |
+ | Juan           | t7 				   | Trabajo:salario=1000            |		
+ |________________|________________________________|_________________________________|
+
+● Operaciones
+● Versiones de cada celda. Por defecto se guardan 3 versiones ordenados por su timestamp.
+  Es decir, cuando yo voy añadiendo valores a una celda se versionan.
+  _________________________________________________
+ | Row Key o      | Descripción                    | 	    
+ | clave primaria |                                |		
+ |----------------|--------------------------------|
+ | Get		  | Recuperar una fila	   	   |           	
+ | Scan           | Recuperar varias filas         | 
+ | Put            | Insertar datos 		   |         
+ | Delete         | Borrar datos 		   |        		
+ |________________|________________________________|
+
+----------------------------------------------------------------------------------------------------------------
+TRABAJAR CON HBASE SHELL
+========================
+
+1.- Desde la unica ventana abierta, [hadoop@localhost hbase] --> cd
+
+2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> pwd --> /home/hadoop --> gedit .bashrc --> se abre un block de notas y añadimos:
+
+                        export HADOOP_HOME=/opt/hadoop
+                        export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+                        export HIVE_HOME=/opt/hadoop/hive
+			export SPARK_HOME=/opt/hadoop/spark
+                        export ZEPPELIN_HOME=/opt/hadoop/zeppelin
+			export HBASE_HOME=/opt/hadoop/hbase
+                        export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HIVE_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$HBASE_HOME/bin
+			export SPARK_DIST_CLASSPATH=$(hadoop classpath)
+			export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+
+Guardamos y cerramos
+
+Para que se carguen las variables, cerramos el terminal y lo volvemos a abrir o ejecutamos el siguiente comando:
+3.- Desde la unica ventana abierta, [hadoop@localhost ~] --> . ./.bashrc
+
+4.- Desde la unica ventana abierta, [hadoop@localhost ~] --> start-hbase.sh    
+
+5.- Desde la unica ventana abierta, [hadoop@localhost ~] --> jps --> Nos devuelve los procesos que se estan ejecutando:
+								       HMaster
+								       Main
+								       Jps
+
+6.- Desde la unica ventana abierta, [hadoop@localhost ~] --> hbase shell
+
+7.- hbase(main):001:0> list
+
+8.- hbase(main):002:0> help
+
+9.- hbase(main):003:0> version
+
+10.- hbase(main):004:0> create 't1','cf1'
+
+11.- hbase(main):005:0> describe 't1'	 
+
+----------------------------------------------------------------------------------------------------------------
+CREAR TABLAS E INSERTAR DATOS
+=============================
+
+1.- hbase(main):006:0> create 'empleados','personal','trabajo'
+
+2.- hbase(main):007:0> list
+
+Podemos comprobar que tenemos dos Column Family: personal y trabajo
+3.- hbase(main):008:0> desc 'empleados' 
+
+El comando 'put' vendria siendo como el comando 'insert' de las bbdd relacionales
+4.- hbase(main):009:0> put 'empleados','1','personal:nombre','Sergio'
+
+5.- hbase(main):010:0> scan 'empleados'
+
+Estoy añadiendo en la misma fila
+6.- hbase(main):011:0> put 'empleados','1','personal:apellidos','Perez Rodriguez'  
+
+7.- hbase(main):012:0> scan 'empleados'
+
+8.- hbase(main):013:0> put 'empleados','1','trabajo:cargo','Jefe' 
+
+9.- hbase(main):014:0> scan 'empleados'
+
+10.- hbase(main):015:0> put 'empleados','2','trabajo:salario',5000
+
+----------------------------------------------------------------------------------------------------------------
+SCAN Y GET
+==========
+
+Recordar que con el comando 'scan' podemos visualizar las filas y columnas
+1.- hbase(main):016:0> scan 'empleados'
+
+2.- hbase(main):017:0> put 'empleados','2','personal:nombre','Raul'
+
+3.- hbase(main):018:0> scan 'empleados'
+
+Si solo quisieramos visualizar la columna 'nombre'
+4.- hbase(main):019:0> scan 'empleados', {COLUMNS=>'personal:nombre'}
+
+Para que versione hasta 3 posibles valores de cada fila que haya dentro de esa Column family.
+5.- hbase(main):020:0> create 'empleado1', {NAME=>'familia1', VERSIONS=>3}
+
+6.- hbase(main):021:0> desc 'empleado1'
+
+El comando 'get' nos permite recuperar la información de las filas que tengan una Row Key especificada
+7.- hbase(main):022:0> get 'empleados','2'
+
+8.- hbase(main):023:0> get 'empleados','1',{COLUMN=>'personal:nombre'}
+
+----------------------------------------------------------------------------------------------------------------
+DELETE, UPDATE Y VERSIONADO
+===========================
+
+Pensemos que este delete no borra la Row Key completa, sino, que sólo borra aquella columna dentro de
+la tabla a la que estemos referenciando.
+1.- hbase(main):024:0> delete 'empleados','2','trabajo:salario'
+
+2.- hbase(main):025:0> scan 'empleados'
+
+El comando 'put', por así decirlo, de manera simple, inserta un Row Column Family valor si no tengo y en el 
+caso de que lo tenga lo modifica o lo sustituye. Aqui sustituimos el valor de 'Raul' por el de 'Pedro'
+3.- hbase(main):026:0> put 'empleados','2','personal:nombre','Pedro'
+
+4.- hbase(main):027:0> put 'empleados','2','personal:comision',1000
+
+5.- hbase(main):028:0> scan 'empleados'
+
+Añadir un nuevo Column Family
+6.- hbase(main):029:0> alter 'empleados','clientes'
+
+7.- hbase(main):030:0> scan 'empleados'
+
+8.- hbase(main):031:0> desc 'empleados'
+
+Modifico el valor de 'Rodriguez' por 'Lino'
+9.- hbase(main):032:0> put 'empleados','1','personal:apellidos','Lino'
+
+10.- hbase(main):033:0> scan 'empleados'
+
+Quiero recuperar de la tabla empleados del Row Key número 1 la columna personal apellido pero la versión 2
+11.- hbase(main):034:0> get 'empleados','1',{COLUMN=>'personal:apellidos',VERSIONS=>2}
+
+Modificar el numero de versiones para una ColumnFamily
+12.- hbase(main):035:0> alter 'empleados',{NAME=>'personal',VERSIONS=>3}
+
+13.- hbase(main):036:0> desc 'empleados'
+
+14.- hbase(main):037:0> put 'empleados','1','personal:apellidos','Ramirez'
+
+15.- hbase(main):038:0> put 'empleados','1','personal:apellidos','Rios'
+
+16.- hbase(main):039:0> get 'empleados','1',{COLUMN=>'personal:apellidos',VERSIONS=>1}
+
+17.- hbase(main):040:0> get 'empleados','1',{COLUMN=>'personal:apellidos',VERSIONS=>2}
+
+18.- hbase(main):041:0> get 'empleados','1',{COLUMN=>'personal:apellidos',VERSIONS=>3}
+
+19.- hbase(main):042:0> disable 'empleados'
+
+18.- hbase(main):043:0> enable 'empleados'
+
+----------------------------------------------------------------------------------------------------------------
+HBASE EN MODO PSEUDO-DISTRIBUIDO
+================================
+
+Vamos a arrancar Hbase que en lo que se denomina Instalación pseudo distribuida. ¿Qué quiere decir eso? Bueno pues 
+básicamente que ya lo vamos a integrar entre comillas con Hadoop, porque lo vamos a conectar con HDFS, pero aún así 
+todo va a estar todavía en local.
+
+1.- Desde la unica ventana abierta, [hadoop@localhost ~] --> cd /opt/hadoop/hbase/conf
+
+2.- Desde la unica ventana abierta, [hadoop@localhost conf] --> gedit hbase-site.xml --> Se abrira un block de notas y modificamos:
+
+	<configuration>
+		<property>
+		    <name>hbase.cluster.distributed</name> <---- Si la ponemos a 'true' lo que le estamos diciendo es que el Hbase se va a comportar
+		    <value>true</value> 		         como si estuviera dentro de un cluster. Esto quiere decir que en vez de ejecutar todo 
+		    </property>					 dentro de una máquina virtual Java, de una JVM, pues vamos a tener básicamente dos 
+								 procesos: el region Server y el Master, es decir, el proceso maestro y los procesos
+								 esclavos.
+  		<property>
+		    <name>hbase.rootdir</name>            
+		    <value>hdfs://localhost:9000/hbase</value>
+  		</property>
+  		<property>
+		    <name>hbase.zookeeper.quorum</name>
+		    <value>localhost</value>
+  		</property>
+	</configuration>
+
+3.- Desde la unica ventana abierta, [hadoop@localhost conf] --> gedit hbase-env.sh --> Se abrira un block de notas y añadimos:
+        
+        # Tell Hbase whether it should manage it's own instance of Zookeeper or not.
+	export HBASE_MANAGES_ZK=false
+	export HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP=true
+
+Guardamos y cerramos
+
+4.- Desde la unica ventana abierta, [hadoop@localhost conf] --> start-hbase.sh
+
+5.- Desde la unica ventana abierta, [hadoop@localhost conf] --> jps --> Y obtenemos: ResourceManager
+										     DFSZKFailoverController
+										     HRegionServer
+										     NameNode
+										     JournalNode
+										     QuorumPeerMain
+										     Jps
+										     HMaster
+
+----------------------------------------------------------------------------------------------------------------
+HBASE EN MODO CLUSTER COMPLETO
+==============================
+
+1.- Desde la unica ventana abierta, [hadoop@localhost conf] --> ls --> cat regionservers --> gedit regionservers
+                                                            --> Indicamos los nodos los cuales queremos que sean esclavos
+ 								(nodo3 y nodo4 = localhost3 y localhost4)
+
+Debemos crear este archivo. Este archivo va a indicar cuales son los backup del maestro. 
+2.- Desde la unica ventana abierta, [hadoop@localhost conf] --> gedit backup-masters --> Añadimos el nodo que queremos que sea
+											 el 'backup-master' (nodo2 = localhost2)
+
+Bueno, ¿y qué falta por hacer? algo muy importante, hay que descargar Hbase en el resto de los nodos 2, 3 y 4 en el mismo 
+directorio y copiar los archivos de configuración del nodo 1 al resto, igual que en Hadoop, al igual que en otros productos de 
+los que hemos visto a lo largo del curso.
+3.- Desde la unica ventana abierta, [hadoop@localhost conf] -->	stop-hbase.sh
+
+4.- Desde la unica ventana abierta, [hadoop@localhost conf] -->	start-hbase.sh	 
+
+5.- Desde la unica ventana abierta, [hadoop@localhost conf] -->	jps --> Y obtenemos: ResourceManager
+										     DFSZKFailoverController
+										     NameNode
+										     JournalNode
+										     QuorumPeerMain
+										     Jps
+										     HMaster
+
+6.- Desde la unica ventana abierta, [hadoop@localhost conf] -->	ssh localhost2 jps --> Y obtenemos: QuorumPeerMain										    
+										     		    Jps
+										     		    HMaster
+
+5.- Desde la unica ventana abierta, [hadoop@localhost conf] -->	ssh localhost3 jps --> Y obtenemos: NodeManager
+												    DataNode
+												    JournalNode
+												    QuorumPeerMain
+												    Jps
+												    HRegionServer
+
+----------------------------------------------------------------------------------------------------------------

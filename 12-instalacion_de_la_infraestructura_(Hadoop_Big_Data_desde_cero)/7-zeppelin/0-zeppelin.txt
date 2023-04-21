@@ -1,0 +1,95 @@
+INSTALAR Y ARRANCAR APACHE ZEPPELIN
+===================================
+
+1.- Descargamos Apache Zeppelin --> https://dlcdn.apache.org/zeppelin/zeppelin-0.10.1/zeppelin-0.10.1-bin-all.tgz
+
+2.- Desde la unica ventana abierta, [hadoop@localhost ~] --> ls /home/hadoop/Descargas/ --> cd /opt/hadoop/
+
+3.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> pwd --> /opt/hadoop
+
+4.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> tar xvf /home/hadoop/Descargas/zeppelin-0.10.1-bin-all.tgz
+
+5.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> mv zeppelin-0.10.1-bin-all/ zeppelin --> ls -l
+
+Configuramos las variables de entorno
+6.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> gedit /home/hadoop/.bashrc --> Se abre un block de notas --> 
+								                                  Debemos tener lo siguiente:
+                                        export HADOOP_HOME=/opt/hadoop
+                                        export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
+                                        export HIVE_HOME=/opt/hadoop/hive
+                                        export ZEPPELIN_HOME=/opt/hadoop/zeppelin
+                                        export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HIVE_HOME/bin
+
+7.- Desde la unica ventana abierta, [hadoop@localhost hadoop] --> cd /opt/hadoop/zeppelin/conf
+
+8.- Desde la unica ventana abierta, [hadoop@localhost conf] --> cp shiro.ini.template shiro.ini
+                                                                cp zeppelin-env.cmd.template zeppelin-env.cmd
+                                                                cp zeppelin-env.sh.template zeppelin-env.sh
+                                                                cp zeppelin-site.xml.template zeppelin-site.xml
+
+9.- Desde la unica ventana abierta, [hadoop@localhost conf] --> gedit shiro.ini --> se abre un block de notas y modificamos:
+
+[users]
+# List of users with their password allowed to access Zeppelin.
+# To use a different strategy (LDAP / Database / ...) check the shiro doc at http://shiro.apache.org/configuration.html#Configuration-INISections
+# To enable admin user, uncomment the following line and set an appropriate password.
+admin = admin, admin               <------------------- Descomentar esta linea y escribir una contraseña y un usuario (en ese orden)
+user1 = password2, role1, role2
+user2 = password3, role3
+user3 = password4, role2
+
+10.- Desde la unica ventana abierta, [hadoop@localhost conf] --> gedit zeppelin-env.sh  --> se abre un block de notas y añadimos:
+
+    Se debe agregar la ruta que aparece en el archivo ".bashrc" de JAVA_HOME y SPARK_HOME (lo vi en un video, no se si es necesario):
+
+    #    http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    #
+
+    export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64  <------------------- La agregue
+    export SPARK_HOME=/opt/hadoop/spark  <------------------- La agregue
+
+    # export JAVA_HOME=
+    # export USE_HADOOP=                            # Whether include hadoop jars into zeppelin server process. (true or false)
+    # export SPARK_MASTER=                          # Spark master url. eg. spark://master_addr:7077. Leave empty if you want to use local mode.
+    # export ZEPPELIN_ADDR                          # Bind address (default 127.0.0.1)
+    # export ZEPPELIN_PORT                          # port number to listen (default 8080)
+    # export ZEPPELIN_LOCAL_IP                      # Zeppelin's thrift server ip address, if not specified, one random IP address will be choosen.
+    # export ZEPPELIN_JAVA_OPTS                     # Additional jvm options. for example, export ZEPPELIN_JAVA_OPTS="-Dspark.executor.memory=8g -Dspark.cores.max=16"    
+
+11.- Desde la unica ventana abierta, [hadoop@localhost conf] --> cd /opt/hadoop/zeppelin/bin                                                               
+
+12.- Desde la unica ventana abierta, [hadoop@localhost bin] --> ./zeppelin-daemon.sh start
+
+13.- Desde el navegador ingresamos a la interfaz gráfica de zeppelin --> https://localhost:8080/
+
+    ESTO LO HACEMOS 1 VEZ, es solo para conectar HIVE con ZEPPELIN:
+
+            # Damos clic en "admin" (nuestro usuario) y luego seleccionamos "Interpreter"
+
+            # Luego, creamos un nuevo interprete (Pulsamos en '+ Create'):
+            # Interpreter name: hive
+            # Interpreter group: jdbc
+
+            # En "Propiedades" ingresamos los siguientes datos:
+            # default.url: jdbc:hive2://localhost:10000
+            # default.user: hadoop
+            # default.password: (queda en blanco)
+            # default.driver: org.apache.hive.jdbc.HiveDriver
+
+            # Todas las otras propiedades que vienen a continuación de "default.driver" las eliminamos. 
+            # Solo necesitamos mantener 4 propiedades
+
+            # Todo esto se extrajo de la documentación de Apache Zeppelin
+            https://zeppelin.apache.org/docs/0.10.1/interpreter/hive.html
+
+            # Para las "Dependencias" ingresamos lo siguiente:
+            # org.apache.hive:hive-jdbc:0.14.0
+            # org.apache.hadoop:hadoop-common:2.6.0	
+
+            # Finalmente "Guardamos"
