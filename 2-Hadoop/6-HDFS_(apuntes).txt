@@ -132,6 +132,8 @@ hdfs dfs -get /hadoopfile1 /home/     :   Copia el archivo 'file1' de hdfs al si
 hdfs dfs -moveFromLocal /home/file1 /hadoop   :  Copia el archivo ‘file1’ del sistema de archivos local a hdfs y 
                                                  luego lo borra del sist. archivos local.
 
+hdfs dfs -copyFromLocal /home/file1 /hadoop   :  Copia el archivo ‘file1’ del sistema de archivos local a hdfs.
+
 ---------------------------------------------------------------------------------------------------------------- 
 
 Clase 2 =====> COMANDOS PARA GESTION DE ARCHIVOS
@@ -141,6 +143,8 @@ hdfs dfs -cp /hadoop/file1 /hadoop1    :  Copia el archivo al directorio destino
 
 hdfs dfs -cp -p /hadoop/file1 /hadoop1 : Copia el archivo al directorio destino en hdfs conservando tiempos 
                                          de acceso y de modificación, propietario y modo
+
+hdfs dfs -rm /hadoop/file1          :  Elimina el archivo 'file1' de hdfs y lo envía a la papelera.
 
 hdfs dfs -rm -f /hadoop/file1          :  Elimina el archivo 'file1' de hdfs y lo envía a la papelera.
 

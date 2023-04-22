@@ -53,7 +53,7 @@ Vamos a configurar HUE para HDFS, HIVE y YARN
 Luego hay que modificar el archivo de Hadoop 'hdfs-site.xml'
 6.- Desde la ventana 1, [hadoop@localhost conf] --> cd /opt/hadoop/etc/hadoop
 
-7.- Desde la ventana 1, [hadoop@localhost hadoop] --> ls -l --> gedir hdfs-site.xml --> Dentro del block de notas añadimos:
+7.- Desde la ventana 1, [hadoop@localhost hadoop] --> ls -l --> gedit hdfs-site.xml --> Dentro del block de notas añadimos:
 
 			...
 			...

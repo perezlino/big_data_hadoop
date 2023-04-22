@@ -216,12 +216,12 @@ TRABAJAR CON HBASE SHELL
                         export HADOOP_HOME=/opt/hadoop
                         export JAVA_HOME=/usr/java/jdk1.8.0_181-amd64
                         export HIVE_HOME=/opt/hadoop/hive
-			export SPARK_HOME=/opt/hadoop/spark
+						export SPARK_HOME=/opt/hadoop/spark
                         export ZEPPELIN_HOME=/opt/hadoop/zeppelin
-			export HBASE_HOME=/opt/hadoop/hbase
+						export HBASE_HOME=/opt/hadoop/hbase
                         export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HIVE_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$HBASE_HOME/bin
-			export SPARK_DIST_CLASSPATH=$(hadoop classpath)
-			export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+						export SPARK_DIST_CLASSPATH=$(hadoop classpath)
+						export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 
 Guardamos y cerramos
 
