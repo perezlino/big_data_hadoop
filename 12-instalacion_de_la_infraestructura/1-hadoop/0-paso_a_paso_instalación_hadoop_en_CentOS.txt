@@ -1,7 +1,8 @@
 1.- Descarga Hadoop
 
+Estoy utilizando VirtualBox: VirtualBox-6.1.42-155177-Win
 Estoy utilizando CentOS 7
-Descargue este archivo: hadoop-3.3.4.tar.gz  
+Estoy Utilizando Hadoop: hadoop-3.3.4.tar.gz  
 
 PREPARAR EL SOFTWARE HADOOP
 ===========================
