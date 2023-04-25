@@ -10,7 +10,7 @@ conectadas sobre una red generalmente LAN.
   |______________|     __|  |__      ______________      __|  |__      |   |    |_________|    | |____| |____| |____| |____| |
    ______________     |__    __|    |______________|    |__    __|     |   |     _________     |  ____   ____   ____   ____  |
   |______________|       |__|                              |__|        |   |    |_________|    | |  ○ | |  ○ | |  ○ | |  ○ | |
-   ______________                        Switch                        |   |                   | |____| |____| |____| |________   ____   ____   ____| |
+   ______________                        Switch                        |   |                   | |____| |____| |____| |____| |
   |______________|                                                     |___|                   |  ____   ____   ____   ____  |
                                                                                                | |  ○ | |  ○ | |  ○ | |  ○ | | 
       Servidores                                                        Rack                   | |____| |____| |____| |____| |
@@ -115,9 +115,14 @@ LA CAPACIDAD FISICA DE UN CLUSTER
 =================================
 
 La capacidad física de un clúster está definida por la suma de los recursos computacionales que 
-posea cada uno de sus nodos. Los recursos computacionales son la memoria RAM, la cantidad de discos 
-duros, la capacidad de cada disco duro y el número de CPUs. La siguiente tabla muestra el cálculo 
-de la capacidad física de un clúster según sus nodos.
+posea cada uno de sus nodos. Los recursos computacionales son: 
+
+- La memoria RAM 
+- La cantidad de discos duros 
+- La capacidad de cada disco duro y 
+- El número de CPUs. 
+
+La siguiente tabla muestra el cálculo de la capacidad física de un clúster según sus nodos.
 
 ==> Importante: Los servidores "Getway" y "Master" NO SE CONTABILIZAN en la potencia computacional 
                 de un Cluster.

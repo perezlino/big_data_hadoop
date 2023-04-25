@@ -71,7 +71,7 @@ hdfs dfs -put /dataset/persona.data /user/hive/warehouse/main_test.db/persona
 SELECT * FROM main_TEST.PERSONA LIMIT 10;
 
 -- Si en determinado caso, algun registro para un determinado campo rompe el esquema definido (es decir,
-   si se asigno un campo como INT y el dato del archivo es STRING, por ejemplo), el valor devuelto sera NULL.
+   si se asigno un campo como INT y el dato del archivo es STRING, por ejemplo, el valor devuelto sera NULL.
 
 -- En la sentencia de creación de la tabla HIVE, notamos que:
 -- - Con "ROW FORMAT DELIMITED", indicamos que nuestra tabla tendra un archivo cuyo contenido está delimitado

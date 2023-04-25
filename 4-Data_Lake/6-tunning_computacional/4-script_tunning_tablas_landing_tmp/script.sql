@@ -1,7 +1,7 @@
 -- 
--- @author Alonso Melgarejo
--- @email alonsoraulmgs@gmail.com
--- @copyright Big Data Academy
+-- @author Alfonso Perez
+-- @email perezlino@gmail.com
+-- @copyright Alfonso Perez
 --
 -- Despliegue del esquema "LANDING"
 -- 

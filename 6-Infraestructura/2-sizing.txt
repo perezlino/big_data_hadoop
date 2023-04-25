@@ -79,7 +79,7 @@ se cargan a la memoria RAM, ya sabemos que hay que tunear todo esto y luego tu p
 y va tomando los registros que hay en memoria RAM para procesar. Así es como funciona el End to End clásico. 
 En un Cluster de Big data funciona de la misma manera, solamente que ya sabemos que es un conjunto de 
 servidores, pero en esencia todos los servidores hacen esto. Nosotros solamente indicamos el nivel de 
-paralización y ya verá el propio clúster en qué servidores ejecuta tu programa y en cada servidor se realiza 
+paralelización y ya verá el propio clúster en qué servidores ejecuta tu programa y en cada servidor se realiza 
 esta ejecución. 
 
 Clásicamente en entornos de Big Data el estándar de servidores es tener 100 TB de disco duro, 256 GB de RAM y 
@@ -184,8 +184,8 @@ hyperthreading, bueno esta es de propiedad de Intel, pero en general, dependiend
 las CPUs, hay un factor que tenemos que conocer. ¿Para qué utilizamos este factor de hyperthreading? 24 uCPUs son los núcleos 
 físicos que tenemos,  pero en nuestro servidor tenemos una tecnología de hyperthreading, por lo tanto, ¿cuál es el factor de 
 hyperthreading? 1.5. ¿cuál es el número de núcleos de CPU? 24, que por el factor de hyperthreading nos da 36. ¿Qué significa esto? 
-Que con 24 núcleos de CPU podemos ejecutar hasta 36 procesos en paralelo. A este numerito que obtenemos le llevamos vCPUs, porque 
-son CPUs virtuales. Físicamente hay 24 CPUs, pero virtualmente, como podemos ejecutar 36 procesos en paralelo, es como si hubiese 
+Que con 24 núcleos de CPU podemos ejecutar hasta 36 procesos en paralelo. A este numerito que obtenemos le llamamos "vCPUs", porque 
+son CPUs virtuales. Físicamente hay 24 uCPUs, pero virtualmente, como podemos ejecutar 36 procesos en paralelo, es como si hubiese 
 36 núcleos de CPU, pero como no son físicos y son virtuales, se les llama vCPUs. 
 
 Así que otra pregunta en tu infraestructura que tendría que hacer es no solamente ¿cuántas CPUs tenemos y cuántos núcleos tiene 
@@ -273,7 +273,6 @@ DISCO DURO
 Consideraciones de Disco duro
 -----------------------------
 
-
 Finalmente, respecto a la parte de Disco duro bueno esto creo que ya es fácil de entender para nosotros. Es importante, no 
 solamente enfocarnos en la capacidad del Disco duro, si no, en el número de los Discos duros, para que el sistema de archivos 
 puede paralelizar las escrituras y las lecturas. Adicionalmente a eso, también tenemos que saber que existen diferentes tipos de 
@@ -284,9 +283,12 @@ estándar en infraestructura, en el mundo del Big Data solamente vamos a tener q
 datos. ¿Dónde se almacenan los datos? En los nodos esclavos. Todos los nodos, sea cual sea su rol, Getway, Master, Metadata o Slave 
 van a requerir de estos Discos duros (Disco Sistema Operativo, Disco Programas, Disco tmp, Disco log, Disco home, Disco de datos),
 pero obviamente todos los servidores tienen un sistema operativo instalado, entonces tiene que tener un Disco duro del sistema 
-operativo, todos esos son Discos duros estándar de infraestructura. A nivel de Big Data tú solamente te vas a preocupar en hacer 
-el sizing de Discos duros para los nodos esclavos, porque ahí es donde se almacena la data. 
-
+operativo, todos esos son Discos duros estándar de infraestructura. 
+               __________________________________________________________________________________________
+              |                                                                                          |
+              |      A nivel de Big Data tú solamente te vas a preocupar en hacer el sizing de           |       
+              |      Discos duros para los nodos esclavos, porque ahí es donde se almacena la data.      | 
+              |__________________________________________________________________________________________|
 
 ---------------------------------------------------------------------------------------------------------------- 
  _____________________________
@@ -429,6 +431,12 @@ nodos por alguna razón. Si colapsa el que Getway, ya no tienes acceso al Cluste
 sabemos que cada vCPU soporta hasta 5 conexiones simultáneas, así que va a depender. Con un nodo tenemos 80 usuarios, con 2 nodos 
 tenemos 160 usuarios, con 3 nodos tendríamos 240 conexiones y así sucesivamente. El número de nodos exacto saldría en función de 
 las conexiones simultáneas esperadas al Clúster. 
+               __________________________________________________________________________________________
+              |                                                                                          |
+              |      El estándar de números de Gateways como mínimo te dice es que tengas 2, porque      | 
+              |      puede que colapse uno de estos dos nodos por alguna razón. Y cada vCPU soporta      | 
+              |      hasta 5 conexiones simultáneas (5 usuarios)                                         |       
+              |__________________________________________________________________________________________|
 
 ¿Qué va a pasar en el caso del Master? aquí ni siquiera vas a tener que pensarlo, el estándar de Industria es 3 Masters, el Master 
 simplemente recibe una petición y delega trabajo. De hecho ni siquiera hace un pequeño procesamiento, no hace nada. Vamos a ver 
@@ -441,11 +449,22 @@ cantidad de Masters que decidieron que se ejecuten en un mismo servidor, por lo 
 ¿Qué pasaría si tuviésemos un número par de Masters? podría darse este caso, 2 Masters dicen que se ejecute en el Nodo Slave 1 y 
 los otros 2 Masters dicen que se ejecute en Nodo Slave 2, por lo tanto, no se puede tomar una decisión. Por eso se recomienda tener 
 un número impar de Masters, pero no pueden ser dos, tienen que ser al menos 3. 
+        _______________________________________________________________________________________________________
+       |                                                                                                       |        
+       |      El estándar de industria nos dice que al menos tengas 3 Master instalados, por dos razones:      | 
+       |      porque si colapsa un Master todavía tenemos otros dos que van a recibir las peticiones y         | 
+       |      además para tener un algoritmo de consenso                                                       |        
+       |_______________________________________________________________________________________________________|
 
 En el caso de los nodos de Metadata el estándar mínimo te dice que tengas dos. ¿Qué se almacena en la metadata? que tal tabla es 
 tal directorio de HDFS. Si pierdes ese mapeo de metadatos, por más réplicas de directorios y archivos que tengas en los esclavos ya 
 no sabes qué tabla es qué directorio, así que al menos debes tener una copia adicional de esa metadata en tu infraestructura. El 
-estándar mínimo es 2, pero ya va a depender de como tu organización trabaje el numero de copias de metadatos. 
+estándar mínimo es 2, pero ya va a depender de como tu organización trabaje el numero de copias de metadatos.
+               __________________________________________________________________________________________
+              |                                                                                          |                     
+              |      En el caso de los nodos de Metadata el estándar mínimo te dice que tengas dos.      |
+              |      ¿Qué se almacena en la metadata? que tal tabla es tal directorio de HDFS.           |
+              |__________________________________________________________________________________________|
 
 ---------------------------------------------------------------------------------------------------------------- 
  ________________________

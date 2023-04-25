@@ -17,7 +17,7 @@ Claro que si. Pero no vale la pena, vamos a tener muchisimos procesos que van a 
 a gastar gasta 10 veces más potencia que si hubiemos utilizado HIVE sobre MapReduce. Asi que estos procesos que 
 son muchos y no generan valor (ETLs) se prefieren tenerlos sobre tecnologias como MapReduce. Tecnologias de Big data 
 que no demandan de mucha memoria RAM para ejecutarse o simplemente tecnologias "no in-memory". Mientras que los 
-procesosejecutados sobre la capa SMART que no son tan simple como un ETL, son procesamientos con mucha mas complejidad,
+procesos ejecutados sobre la capa SMART que no son tan simple como un ETL, son procesamientos con mucha mas complejidad,
 donde utilizamos programacion, y es donde vale la pena utilizar SPARK, que corresponde a una tecnologia "in-memory",
 que requiere de muchisima memoria RAM para poder funcionar lo más rápido posible.
 
@@ -26,34 +26,37 @@ ejecutaron bien y 5 por alguna razón se cayeron, esto es normal también en un 
 algún porcentaje de los procesos que van a caer. Son las 9:00 de la mañana y nos damos cuenta de que 5 procesos han 
 caído. ¿Qué es lo que se puede hacer? obviamente hay que volver a ejecutar los scripts de cada uno de estos procesos, 
 pero se va a demorar mucho. Cuando eso pasa, lo que se hace es cambiar el HIVE a SPARK, solamente para estos 5 procesos. 
-HIVE por defecto se traduce a MapReduce o al motor “no in-memory” que tú estés utilizando, pero si tienes que hacer un 
-reproceso de emergencia, te vas a la sección del tunning del código HIVE y donde dice “mapreduce” lo borramos y ponemos 
-“spark” y hay garantía de que el proceso que estamos relanzando va a ir hasta 100 veces más rápido y que probablemente 
+HIVE por defecto se traduce a MapReduce o al motor "no in-memory" que tú estés utilizando, pero si tienes que hacer un 
+reproceso de emergencia, te vas a la sección del tunning del código HIVE y donde dice "mapreduce" lo borramos y ponemos 
+"spark" y hay garantía de que el proceso que estamos relanzando va a ir hasta 100 veces más rápido y que probablemente 
 va a consumir 10 veces más memoria RAM, pero no pasa nada, porque simplemente es un relanzamiento de emergencia, ya que, 
 son procesos que cayeron en la madrugada. Se ejecutará muy rápido esos 5 procesos y listo, estarán a las 9:05 de la mañana, 
 así que podrá seguir trabajando el negocio normalmente. Terminaron de procesarse y volvemos a cambiar el script para que 
-HIVE se traduzca a “mapreduce” sin la necesidad de tocar ninguna línea de la lógica de negocio de nuestro proceso en HIVE. 
-Así que ahí sí podríamos usar Spark sobre estas capas del Data Lake, para  reprocesos de emergencia. ¿Qué es lo importante 
-entender aquí? en un Data Lake o en el equivalente en que tú tengas en el momento de hacer tus implementaciones, los procesos 
-de ETL al no ser demandantes hay que colocarlos en alguna tecnología que no consuma mucha memoria RAM. El estándar de facto 
-en el ecosistema de Hadoop es MapReduce, pero recordemos que el ecosistema es modular, así que, ahí podremos cambiarlo por 
-cualquier otro motor, pero no se recomienda colocar un motor tan potente como Spark para realizar ETLs, porque te va a 
-consumir muchísima memoria RAM. Ese motor potente hay que dejarlo para lo que sí aporta valor al negocio, es decir, en la 
-capa SMART, porque acá es donde le vamos a sacar el jugo a este motor de Spark. Para los ETLs, Spark solamente está reservado 
-para retrocesos de emergencia, ¿que significa un reproceso de emergencia? que tu script HIVE no se ejecutó bien por alguna 
-razón en la madrugada y hay que relanzarlo de urgencia en la mañana, tiene que estar listo a las 9:00 de la mañana, ya saben 
-qué hacer, entramos al script y en la sección del tunning donde dice: quiero que el engine, quiero que el motor sea “mapreduce”, 
-lo borramos, lo ponemos en “spark” y lo lanzamos y Spark va a correr hasta 100 veces más rápido, solamente por una emergencia. 
-Termina de procesar, borramos “spark” y le decimos “…oye quiero que lo sigas traduciendo a mapreduce…”, sin la necesidad de 
-tocar ni una sola línea de nuestra lógica de negocio. 
-                                     _______________________________________
-                                    |                                       |
-                                    |   Ejecución sobre MAPREDUCE           |
-                                    |   SET hive.execution.engine=mr;       |
-                                    |                                       |    
-                                    |   Ejecución sobre SPARK               |
-                                    |   SET hive.execution.engine=spark;    |
-                                    |_______________________________________|
+HIVE se traduzca a "mapreduce" sin la necesidad de tocar ninguna línea de la lógica de negocio de nuestro proceso en HIVE. 
+Así que ahí sí podríamos usar Spark sobre estas capas del Data Lake, para  reprocesos de emergencia. 
+ _______________________________________________________________________________________________________________________________________
+|                                                                                                                                       |                                        
+|     ¿Qué es lo importante entender aquí? en un Data Lake o en el equivalente en que tú tengas en el momento de hacer tus              |
+|     implementaciones, los procesos de ETL al no ser demandantes hay que colocarlos en alguna tecnología que no consuma mucha          |
+|     memoria RAM. El estándar de facto en el ecosistema de Hadoop es MapReduce, pero recordemos que el ecosistema es modular,          |
+|     así que, ahí podremos cambiarlo por cualquier otro motor, pero no se recomienda colocar un motor tan potente como Spark para      | 
+|     realizar ETLs, porque te va a consumir muchísima memoria RAM. Ese motor potente hay que dejarlo para lo que sí aporta valor       |
+|     al negocio, es decir, en la capa SMART, porque acá es donde le vamos a sacar el jugo a este motor de Spark. Para los ETLs,        |
+|     Spark solamente está reservado para retrocesos de emergencia, ¿que significa un reproceso de emergencia? que tu script HIVE       |
+|     no se ejecutó bien por alguna razón en la madrugada y hay que relanzarlo de urgencia en la mañana, tiene que estar listo a        |
+|     las 9:00 de la mañana, ya saben qué hacer, entramos al script y en la sección del tunning donde dice: quiero que el engine,       |
+|     quiero que el motor sea "mapreduce", lo borramos, lo ponemos en "spark" y lo lanzamos y Spark va a correr hasta 100 veces más     |
+|     rápido, solamente por una emergencia. Termina de procesar, borramos "spark" y le decimos "…oye quiero que lo sigas traduciendo    |
+|     a mapreduce…", sin la necesidad de tocar ni una sola línea de nuestra lógica de negocio.                                          |        
+|_______________________________________________________________________________________________________________________________________|
+                                                 _______________________________________
+                                                |                                       |
+                                                |   Ejecución sobre MAPREDUCE           |
+                                                |   SET hive.execution.engine=mr;       |
+                                                |                                       |    
+                                                |   Ejecución sobre SPARK               |
+                                                |   SET hive.execution.engine=spark;    |
+                                                |_______________________________________|
 
 Por último, que otra cosa como mínimo tenemos que conocer de Spark para poder programar, ¿por qué Spark es hasta 100 veces más 
 rápido que MapReduce? uno podría pensar que el motor de Spark está mejor optimizado que el motor de MapReduce y no es cierto al 
@@ -61,12 +64,20 @@ menos del todo, sino que la filosofía de trabajo es diferente. Acá por ejemplo
 digamos que queremos procesar una tabla, tenemos el paso uno donde hacemos algo y sale una tabla resultante, esta tabla resultante 
 va a ser un temporary table. Agregamos otro paso, hacemos algo más y sale el temporary table 2, hacemos algo más y sale el 
 temporary table 3 y finalmente bajamos esa tabla temporal a la tabla permanente. ¿Que implica esto? recordemos que al hablar de 
-tablas, estos son directorios de HDFS y al hablar de directorios de HDFS estamos hablando de disco duro. En motores como MapReduce 
-cada paso intermedio que tenemos que hacer para llegar hasta nuestra resultante final, forzosamente tenemos que bajarla sí o sí a
-disco duro. 
+tablas, estos son directorios de HDFS y al hablar de directorios de HDFS estamos hablando de disco duro. 
+
+                 _______________________________________________________________________________________________________
+                |                                                                                                       |
+                |     En motores como MapReduce cada paso intermedio que tenemos que hacer para llegar hasta nuestra    | 
+                |     resultante final, forzosamente tenemos que bajarla sí o sí a disco duro.                          |
+                |_______________________________________________________________________________________________________|
+
 
 MAP REDUCE
 ----------
+
+Globalmente este proceso ha usado 10 GB de memoria RAM. Utiliza 10 GB de RAM, baja a disco duro y luego libera esa RAM. Luego vuelve
+a utilizar 10 GB de memoria RAM en el siguiente paso.
 
 Esto es lo que queremos           Debemos bajar esta tabla           Debemos bajar esta tabla            Debemos bajar esta tabla
 procesar. Y esto vive                  a Disco duro                       a Disco duro                        a Disco duro
@@ -82,19 +93,26 @@ en Disco duro                               |                                   
                                      Tabla Temporal                      Tabla Temporal                      Tabla Temporal                      Tabla resultante   
                                            1                                    2                                   3
 
-¿Qué es lo que va a pasar al momento de programar en Spark? aquí la situación va a cambiar completamente. El primer paso siempre 
-es el mismo, esto es lo que queremos procesar, lo que queremos procesar vive en disco duro, aquí está el procesamiento que implica 
-leer los datos, cargarlo a la memoria RAM y tenemos la resultante, pero la resultante ya no la vamos a colocar en el disco duro, 
-la resultante la vamos a escribir directamente en la memoria RAM. El siguiente paso tomará esta resultante intermedio 1, hará algo 
-y la resultante intermedia 2 irá también a la memoria RAM y así sucesivamente, estaremos encadenando pasos cuyas resultantes 
-intermedias van a memoria RAM. En el último paso que ya tengo la resultante final, vamos a guardarla en una tabla para que luego 
-alguien la consulte. Eso ya implica una bajada a Disco duro, pero, ¿dónde está la ganancia de Spark? las resultantes intermedias 
-las escribe en memoria RAM, ya no las vamos a escribir en Disco duro como lo hacía MapReduce. ¿Cuál es la ventaja de hacer eso? 
-ya sabemos que la memoria RAM es 100 veces más rápida que el Disco duro, por lo tanto, estos procesos pueden llegar a ir hasta 100 
-veces más rápido, ese es el truco de Spark. 
+ __________________________________________________________________________________________________________________________________________
+|                                                                                                                                          |             
+|    ¿Qué es lo que va a pasar al momento de programar en Spark? aquí la situación va a cambiar completamente. El primer paso siempre      |     
+|    es el mismo, esto es lo que queremos procesar, lo que queremos procesar vive en disco duro, aquí está el procesamiento que implica    |     
+|    leer los datos, cargarlo a la memoria RAM y tenemos la resultante, pero la resultante ya no la vamos a colocar en el disco duro,      |     
+|    la resultante la vamos a escribir directamente en la memoria RAM. El siguiente paso tomará esta resultante intermedio 1, hará algo    |      
+|    y la resultante intermedia 2 irá también a la memoria RAM y así sucesivamente, estaremos encadenando pasos cuyas resultantes          |     
+|    intermedias van a memoria RAM. En el último paso que ya tengo la resultante final, vamos a guardarla en una tabla para que luego      |     
+|    alguien la consulte. Eso ya implica una bajada a Disco duro, pero, ¿dónde está la ganancia de Spark? las resultantes intermedias      |     
+|    las escribe en memoria RAM, ya no las vamos a escribir en Disco duro como lo hacía MapReduce. ¿Cuál es la ventaja de hacer eso?       |     
+|    ya sabemos que la memoria RAM es 100 veces más rápida que el Disco duro, por lo tanto, estos procesos pueden llegar a ir hasta 100    |     
+|    veces más rápido, ese es el truco de Spark.                                                                                           |     
+|__________________________________________________________________________________________________________________________________________|
+
 
 SPARK
 -----
+
+Globalmente este proceso ha usado 30 GB de memoria RAM. Cada paso utiliza 10 GB de memoria RAM, se van acumulando. No se libera
+memoria RAM.
 
 Esto es lo que queremos           
 procesar. Y esto vive              
@@ -125,14 +143,14 @@ por lo tanto esa memoria RAM no se va a liberar, el segundo paso genera otros 10
 se baja a disco duro y al bajar el disco duro se libera la memoria RAM. Pero globalmente este proceso no ha estado liberando RAM 
 en cada paso intermedio, la ha estado acumulando, por lo tanto, el mismo proceso sobre Spark ha consumido 30 GB de memoria RAM, 3 
 veces más memoria RAM que si hubiera estado sobre MapReduce. Obviamente, en Spark va a ir muy rápido, pero te va a consumir mucha 
-memoria RAM, Spark de hecho si ustedes entran en la página web de Spark te dice solamente “…soy 100 veces más rápido que Hadoop…” 
+memoria RAM, Spark de hecho si ustedes entran en la página web de Spark te dice solamente "…soy 100 veces más rápido que Hadoop…" 
 y eso no tiene sentido, pero no te dice que te puede llegar a consumir hasta 10 veces más memoria RAM. Esto potencialmente es un 
 problema en Spark. De hecho, si ustedes ya han programado algo en Spark probablemente se habrán encontrado con un error clásico, 
 que de pronto ahí tienen su proceso, avanza, está avanzando normal y llega un momento en que ya no avanza, se queda como que 
 pensando y tú dices ¿por qué ya no avanza? generalmente eso se debe a que la memoria RAM que el Cluster te puede dar ha llegado a 
 un límite y por eso tu proceso ya no puede avanzar, porque, no consigue más memoria RAM del Cluster. ¿Cómo se soluciona esto? van 
-a ver que este encadenamiento de procesos lo vamos a solucionar con un patrón conocido como “CHEKCPOINT”, pero para hablar de esto 
-primero tenemos que codificar un poco. En términos simples el “checkpoint” lo que hace es bajar a disco duro una cadena de procesos, 
+a ver que este encadenamiento de procesos lo vamos a solucionar con un patrón conocido como "CHECKPOINT", pero para hablar de esto 
+primero tenemos que codificar un poco. En términos simples el "checkpoint" lo que hace es bajar a disco duro una cadena de procesos, 
 generalmente cada 10 pasos y bueno, ya de esto hablaremos después de que practiquemos un poco los códigos en Spark.
 
 Lo último que tienen que conocer es que gracias Spark nosotros vamos a tener lo siguiente, nosotros habíamos dicho que cuando vamos 
@@ -140,19 +158,19 @@ a procesar algo, ese algo iba en disco duro, el primer paso es cargarlo a la mem
 CPU. ¿Qué es lo que va a pasar en un clúster de big data? ya sabemos que tenemos nuestros nodos esclavos, estos nodos esclavos 
 nosotros ya lo vemos como un único gran súper servidor, que tiene un único gran disco duro y una única gran memoria RAM. Cuando 
 nosotros subamos archivos pesados a la memoria RAM, van a ser subidos a esta gran memoria RAM virtual, que es la suma de todos 
-estos servidores. ¿Cómo vamos a hacer referencia a esos archivos? por medio de unas variables especiales llamadas “Dataframe”. 
-Cuando nosotros escribimos: var A = “hola mundo”, lo que estamos haciendo en nuestra computadora es, esta variable está 
-referenciando a una zona de memoria RAM en donde está escrito este texto “hola mundo”. Cuando nosotros hacemos lo siguiente: 
+estos servidores. ¿Cómo vamos a hacer referencia a esos archivos? por medio de unas variables especiales llamadas "Dataframe". 
+Cuando nosotros escribimos: var A = "hola mundo", lo que estamos haciendo en nuestra computadora es, esta variable está 
+referenciando a una zona de memoria RAM en donde está escrito este texto "hola mundo". Cuando nosotros hacemos lo siguiente: 
 var B = read(archivo) y le indicamos la ruta del archivo, lo que estamos haciendo es que para la variable B, tenemos la referencia 
 a la zona de memoria RAM, en donde se cargaron todos los registros de un archivo, para eso nos sirven las variables de programación, 
 para hacer referencia a las zonas de memoria RAM en donde están nuestros datos y ya podemos programar con esas variables. En el 
 caso de Spark, si nosotros queremos cargar un archivo que está en HDFS,  que pese 100 GB, se va a cargar a la memoria RAM del
 Cluster, quizá se cargue en diferentes servidores, 25 GB en 4 servidores distintos, eso ya es problema del Cluster, pero tú lo vas 
 a ver como si fuera una única variable (VAR) y solo una variable, pero esa variable va a estar distribuida en la RAM de los 
-diferentes servidores. Una variable que físicamente está distribuida en servidores diferentes, se le conoce como un “Dataframe”.
+diferentes servidores. Una variable que físicamente está distribuida en servidores diferentes, se le conoce como un "Dataframe".
 
 Vamos a trabajar con estos Dataframes. Para efectos prácticos, para ti va a ser una variable más, tú no te vas a dar cuenta si 
 quiera que si está en un server o si está de manera distribuida, ese ya es trabajo del propio clúster, tu simplemente le vas a 
-decir: “…oye quiero que este archivo de HDFS que voy a procesar, lo cargues a la variable A…” y nada más. ¿Cómo vive esa 
+decir: "…oye quiero que este archivo de HDFS que voy a procesar, lo cargues a la variable A…" y nada más. ¿Cómo vive esa 
 variable A en el Cluster? ese es asunto ya del propio cluster. De acuerdo, ya tenemos entonces un overview de qué es lo que hace 
 Spark. 

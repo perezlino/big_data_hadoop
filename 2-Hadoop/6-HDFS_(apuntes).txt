@@ -89,6 +89,8 @@ Clase 2 =====> COMANDOS PARA LISTAR ARCHIVOS
 hdfs dfs -ls /	  :   Lista todos los archivos y directorios para la ruta 'root' o 'raiz'. HDFS es un sistema de 
                       archivos, por lo tanto tiene una carpeta raíz (/) donde se encuentran todas sus otras carpetas
 
+hdfs dfs -ls /ruta	  : Lista todos los archivos y directorios para una ruta HDFS especifica.
+
 hdfs dfs -ls -h / :   Lista los archivos con su tamaño en formato legible. Se especifican las unidades de Kilobytes (K), 
                       Megabytes (M) y Gigabytes (G)
 
@@ -144,12 +146,15 @@ hdfs dfs -cp /hadoop/file1 /hadoop1    :  Copia el archivo al directorio destino
 hdfs dfs -cp -p /hadoop/file1 /hadoop1 : Copia el archivo al directorio destino en hdfs conservando tiempos 
                                          de acceso y de modificación, propietario y modo
 
-hdfs dfs -rm /hadoop/file1          :  Elimina el archivo 'file1' de hdfs y lo envía a la papelera.
+hdfs dfs -rm /hadoop/file1          :  Elimina el archivo 'file1' de hdfs.
+
+hdfs dfs -rm -r /hadoop             :  Eliminar un directorio. También podemos utilizarlo para eliminar 
+                                       archivos. 
 
 hdfs dfs -rm -f /hadoop/file1          :  Elimina el archivo 'file1' de hdfs y lo envía a la papelera.
 
 hdfs dfs -rm -r -f /hadoop             :  Eliminar un directorio. También podemos utilizarlo para eliminar 
-                                          archivos. 
+                                          archivos y lo envia a la papelera.
 
 hdfs dfs -touchz /hadoop/archivo_vacio :  Crea un archivo en hdfs con tamaño 0. A pesar que el archivo es un 
                                           archivo vacio se generan 3 copias.
@@ -162,6 +167,9 @@ hdfs dfs -mkdir -p /hadoop/directorio_nuevo1/directorio_nuevo2/.../archivo   : N
                                                                                no solamente el ultimo directorio.
 
 hdfs dfs -mv /hadoop/directorioA/archivo  /hadoop/directorioB   :  Mover un archivo entre directorios
+
+hdfs dfs -mv /hadoop/directorioA/*.extension  /hadoop/directorioB   :  Mover todos los archivos con una extension  
+                                                                       especifica entre directorios
 
 hdfs dfs -chown <nuevo_usuario>:<nuevo_grupo> /<ruta_directorio_o_archivo> :  Cambiar el owner de un directorio o archivo.
                                                                               Para utilizar este comando, debemos estar 

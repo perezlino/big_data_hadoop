@@ -94,10 +94,15 @@ que es muy rápida, que es hasta 100 veces más rápido que el disco duro. El ar
 la memoria RAM. Ahora cuando la CPU empieza a procesar los datos, como están en la memoria RAM va a poder recibir 
 esos datos 100 veces más rápido que si los consultase directamente del disco duro. Es por eso que existe la memoria RAM. 
 Por supuesto, es normal tener discos duros muy grandes y memoria RAM pequeña en comparación, porque la memoria RAM es 
-mucho más costosa que el disco duro. Así es como funciona, se carga el archivo a la memoria RAM y el CPU agarra los 
-datos de la memoria RAM, hace lo que tiene que hacer y el output lo escribe en la memoria RAM y el desarrollador agarra 
-eso de memoria RAM y lo persiste en disco duro, finaliza el programa y el sistema operativo libera los recursos de la 
-memoria RAM para que otro programa pueda utilizar esa memoria RAM. 
+mucho más costosa que el disco duro. 
+         _________________________________________________________________________________________________
+        |                                                                                                 |
+        |   Así es como funciona, se carga el archivo a la memoria RAM y el CPU agarra los datos de la    | 
+        |   memoria RAM, hace lo que tiene que hacer y el output lo escribe en la memoria RAM y el        |
+        |   desarrollador agarra eso de memoria RAM y lo persiste en disco duro, finaliza el programa y   |
+        |   el sistema operativo libera los recursos de la memoria RAM para que otro programa pueda       |
+        |   utilizar esa memoria RAM.                                                                     |
+        |_________________________________________________________________________________________________|
 
 Así es como se procesa. Si este pequeño archivo que estamos procesando en nuestra computadora pesa un megabyte, 
 obviamente eso va a poder entrar en la memoria RAM. Imaginemos que este es un proceso COUNT, va poder procesar un 
@@ -127,7 +132,7 @@ archivo pesado, tendrías que procesarlo por partes.
                    |_____________________________________________________________________|
 
 Sin embargo, recordemos que ahora estamos en un clúster de Big Data, y la memoria RAM es muy grande, además de que tú 
-como desarrollador vas a indicar dame cierta cantidad de RAM y ya el Cluster verá de qué servidores separa esa memoria 
+como desarrollador vas a indicarme cierta cantidad de RAM y ya el Cluster verá de qué servidores separa esa memoria 
 RAM. Así que la pregunta que queda es y ¿cuánta memoria RAM tenemos que separar? la respuesta es, en cada servidor 
 esclavo en el cual está ejecutándose una instancia de nuestro programa paralelizable, debemos de separar tanta memoria 
 RAM como tanto pesase la parte del archivo que ha sido enviado a este servidor a ser procesado. 
@@ -147,7 +152,7 @@ Vamos a poner ahora 2 escenarios, tenemos nuestro archivo que pesa 100 GB, hemos
 lógica de negocio vamos a probar los tiempos. Vamos a ver qué pasaría si instanciamos 10 containers computacionales, solo 
 10. Sabemos que al momento de tunear cada container tenemos que indicarle la cantidad de CPU y de memoria RAM. ¿cuánta 
 CPU tenemos que asignarle? ya sabemos que existe un estándar para procesos batch en Big data en el cual se asignan 
-2 CPU‘s. Y ¿cuánta memoria RAM? Hemos instanciado 10 containers, el archivo que queremos procesar pesa 100 GB, cada 
+2 CPU's. Y ¿cuánta memoria RAM? Hemos instanciado 10 containers, el archivo que queremos procesar pesa 100 GB, cada 
 container va a recibir 1/10 parte, ya que tenemos 10 partes, eso quiere decir que más o menos cada containers como input 
 va a recibir 10 GB de datos. Por lo tanto, vamos a necesitar 10 GB de RAM. 
 
@@ -160,7 +165,7 @@ va a recibir 10 GB de datos. Por lo tanto, vamos a necesitar 10 GB de RAM.
 De alguna manera, que aún no conocemos, tenemos que colocar esos números en la sección de TUNNING. Le damos a ejecutar a 
 nuestro script por Beeline y digamos que se demora 4 horas. ¿Qué es lo que queremos hacer ahora? Negocio nos ha pedido que 
 sea 4 veces más rápido, que se procese en una hora. Perfecto, si Negocio quiere que sea 4 veces más rápido, hay que 
-levantar más instancias de container, ¿cuánto? Pues, 4 veces más, 40  containers. Ahora es donde viene el cambio, que es 
+levantar más instancias de container, ¿cuánto? Pues, 4 veces más, 40 containers. Ahora es donde viene el cambio, que es 
 lo que va a pasar con la CPU y la memoria RAM, ya sabemos, estamos frente a un proceso en batch, bueno entonces el 
 estándar me dice 2 CPU’s, ahí no hay nada que cambiar, lo que si vamos a tener que cambiar es la memoria RAM. ¿En qué 
 factor? si hemos aumentado el nivel de paralelización por 4, ¿qué significa? Significa que ya no vamos a tener 10 
@@ -172,6 +177,11 @@ capacidades a nivel de infraestructura de 100 TB de disco duro, 256 GB de RAM y 
 va a pasar en el caso de que levantemos 40 containers? si se dan cuenta como ahora tenemos más container, cada container 
 va a recibir el total del archivo dividido en 40 porque hemos paralelizado, lo que va a procesar cada container se hace 
 más pequeño. 100 entre 40 es 2.5 GB de RAM, cada container ahora va a requerir 2.5 GB de RAM.  
+                 _________________________________________________________________________________
+                |                                                                                 |
+                |   Se había dicho que cada container se va a un servidor, pero esto no es así.   | 
+                |   Un mismo servidor puede tener varios containers a la vez.                     |
+                |_________________________________________________________________________________|
 
                              ________________________________________________
                             |  # Containers  |  CPU   |   RAM   |   Tiempo   |
@@ -188,8 +198,14 @@ van a poder entrar varios containers y como hay muchísimas CPU, de hecho, tenem
 implica que en un server esclavo pueden entrar hasta 20 container y hay garantía de que cada container va a ejecutarse de 
 manera paralela. Ahora, ¿de qué depende de que los container se colocan en dos servidores o en 10 servidores? eso ya es 
 tema del propio Cluster. Como desarrollador nos olvidamos de la infraestructura y solamente indicamos cuanta potencia 
-computacional queremos de esa infraestructura. Esta es la esencia de cómo se hace un TUNNING COMPUTACIONAL y  de hecho es 
+computacional queremos de esa infraestructura. Esta es la esencia de cómo se hace un TUNNING COMPUTACIONAL y de hecho es 
 la base para la computación distribuida clásica. 
+             _______________________________________________________________________________________________
+            |                                                                                               |
+            |   ¿De qué depende de que los container se colocan en dos servidores o en 10 servidores?       |
+            |   eso ya es tema del propio Cluster. Como desarrollador nos olvidamos de la infraestructura   | 
+            |   y solamente indicamos cuanta potencia computacional queremos de esa infraestructura.        |
+            |_______________________________________________________________________________________________|
 
 Empresarialmente que nos va a importar a nosotros, lo siguiente, hemos puesto un ejemplo simple de entender, hemos dicho 
 que tenemos un archivo y se realizó un proceso COUNT, ¿cómo paralelizamos ese proceso?, pues dijimos que crearíamos varias 
@@ -212,7 +228,17 @@ pesado. ¿Cuál es la desventaja? Que el tunning no va a ser tan exacto, para ef
 en el tiempo del tunning. ¿Qué significa eso? Pues a un proceso que dure 10 horas le haces el tunning que hemos visto y 
 esto se convierte en 1 hora, y probablemente el tiempo de ejecución va a ser de 1 hora 15 minutos o incluso menos 45 
 minutos (15 minutos más 15 minutos menos). Pero como estamos en un proceso batch, 15 minutos es despreciable. Así que se 
-va a preferir siempre esta forma de tunning. 
+va a preferir siempre esta forma de tunning.
+         _________________________________________________________________________________________________________
+        |                                                                                                         |  
+        |   ¿Qué pasa si tengo varios archivos y no un solo archivo, qué es lo que va a pasar en la vida real?    | 
+        |                                                                                                         |  
+        |   Si nuestro proceso quiere procesar más de un archivo a la vez, vamos a aplicar las reglas que hemos   |
+        |   visto para hacer el cálculo del tunning con el ARCHIVO MAS PESADO y el resto de archivos, los         |
+        |   podemos ignorar. Solamente enfocarnos en el más pesado. Por ejemplo, si dentro del grupo de archivos  |
+        |   a procesar, un archivo pesa 1 GB, otro 2 GB, otro 10 GB y otro 300 MB, todos los cálculos lo hacemos  |
+        |   con el archivo más pesado.                                                                            |
+        |_________________________________________________________________________________________________________|
 
 Para entenderlo mejor todavía, la sesión anterior nosotros programamos un proceso que tomaba 3 tablas, esas 3 tablas de 
 entrada y escribimos nuestra resultante en una tabla. Ahora, vamos a tunear este proceso, ¿cómo se empezaría?  tenemos 
@@ -273,6 +299,13 @@ creían, no existía Optimización. Eso es uno de los grandes problemas de MapRe
 ventaja la que es que no requiere de muchos recursos computacional para poder ejecutarse, así que como MapReduce nos 
 ahorra recursos computacionales los vamos a utilizar para los procesos más simples que puedan existir, los procesos de 
 ETL. 
+           ___________________________________________________________________________________________
+          |                                                                                           |    
+          |   ¿Cómo funciona un proceso de MapReduce? antiguamente cuando no teníamos todavía bien    | 
+          |   definidos y bien maduros estas herramientas de Big Data, cuando se creó MapReduce se    |
+          |   siguió toda una filosofía de utilizar dos tipos de containers computacionales al        |
+          |   momento de procesar, los MAPPERS y los REDUCERS.                                        |
+          |___________________________________________________________________________________________|
              _______________________________________________________________________________________
             |                                                                                       |            
             |  ''como MapReduce nos ahorra recursos computacionales los vamos a utilizar para los   |
@@ -301,17 +334,21 @@ el tuneo, porque no existe una regla general para poder tunear Mappers y Reducer
 cómo tunear cuando tienes un container, ¿pero que pasa si tenemos dos containers? Eso eleva la complejidad, no hay una 
 recomendación general exacta. 
 
-Así que, ¿en la vida práctica en las empresas que se aplica? académicamente hablando podríamos entrar en muchísimos 
-detalles y empezar a hablar de cómo dependiendo de lo que tú programes hay diferentes formas de tunear nuestro código 
-sobre HIVE en MapReduce, pero para efectos empresariales prácticos te vas a olvidar que existe estos Reducers y solamente 
-nos vamos a enfocar en los Mappers. Vamos a tunear el número de container Mappers, la cantidad de RAM para cada Mapper 
-y la cantidad de CPU también para cada Mapper. Por ejemplo, eso es fácil de hacer, tenemos 100 GB, vamos a poner 10 
-containers, eso implica que cada container va a recibir 10 GB de datos y el estándar me dice 2 CPU. Y ¿qué va a pasar 
-con el tuning de los Reducers? para que no nos compliquemos, hacemos lo mismo, si hemos colocado 10 containers (Mappers), 
-también colocaremos 10 Reducers, si hemos colocado 10 GB para cada Mapper, también colocaremos 10GB para cada Reducer. 
-Y si hemos colocado 2 CPUs para cada Mapper, también colocaremos 2 CPUs para cada Recucer. Y listo, ya tenemos tuneados 
-los Reducers, obviamente la performance va a estar impactada más o menos un 5% porque son procesos del tipo ETL, no 
-tienen lógicas complejas, así que puede llegar a ser despreciable. 
+ _______________________________________________________________________________________________________________________________
+|                                                                                                                               |
+|   Así que, ¿en la vida práctica en las empresas que se aplica? académicamente hablando podríamos entrar en muchísimos         |
+|   detalles y empezar a hablar de cómo dependiendo de lo que tú programes hay diferentes formas de tunear nuestro código       |
+|   sobre HIVE en MapReduce, pero para efectos empresariales prácticos te vas a olvidar que existe estos Reducers y solamente   | 
+|   nos vamos a enfocar en los Mappers. Vamos a tunear el número de container Mappers, la cantidad de RAM para cada Mapper      |
+|   y la cantidad de CPU también para cada Mapper. Por ejemplo, eso es fácil de hacer, tenemos 100 GB, vamos a poner 10         |
+|   containers, eso implica que cada container va a recibir 10 GB de datos y el estándar me dice 2 CPU. Y ¿qué va a pasar       |  
+|   con el tuning de los Reducers? para que no nos compliquemos, hacemos lo mismo, si hemos colocado 10 containers (Mappers),   |  
+|   también colocaremos 10 Reducers, si hemos colocado 10 GB para cada Mapper, también colocaremos 10GB para cada Reducer.      |
+|   Y si hemos colocado 2 CPUs para cada Mapper, también colocaremos 2 CPUs para cada Recucer. Y listo, ya tenemos tuneados     |   
+|   los Reducers, obviamente la performance va a estar impactada más o menos un 5% porque son procesos del tipo ETL, no         |
+|   tienen lógicas complejas, así que puede llegar a ser despreciable.                                                          |
+|_______________________________________________________________________________________________________________________________| 
+ 
              _______________________________________________________________________________________
             |                                                                                       |            
             |  ''En resumen, en MapReduce vamos a enfocarnos en tunear solamente los containers     |    
