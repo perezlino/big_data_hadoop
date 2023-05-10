@@ -28,21 +28,33 @@ componente de encolamiento y el CONSUMER es quien extrae esos registros en forma
 archivito. También es importante saber que el PRODUCER no extrae los datos de la fuente de datos
 en tiempo real, recordemos que esa es otra pieza de software llamado 'Source Client', es quién se 
 conecta la fuente de datos y hace el CTRL + C, copia lo que hay en la fuente de datos, se lo pasa 
-el PRODUCER y el PRODUCER hace el CTRL + V. Kafka es altamente escalable y paralelizable, esto es 
-porque funciona sobre un Clúster, de hecho, el recurso computacional importante de Kafka es solamente 
-la memoria RAM, no la CPU, porque Kafka no va a procesar nada, solamente almacena de manera temporal. 
+el PRODUCER y el PRODUCER hace el CTRL + V. 
+
+ ____________________________________________________________________________________________________
+|                                                                                                    |       
+|     Kafka es altamente escalable y paralelizable, esto es porque funciona sobre un Clúster, de     |   
+|     hecho, el recurso computacional importante de Kafka es solamente la memoria RAM, no la CPU,    | 
+|     porque Kafka no va a procesar nada, solamente almacena de manera temporal.                     |                   
+|____________________________________________________________________________________________________|
+
+
 Existen componentes como Kafka streaming que te permiten procesar en el mismo Clúster que Kafka, pero 
 no se recomienda, para no mezclar la tarea de procesamiento con la tarea de captura de datos, es mejor 
 siempre tenerlo en Clúster separados. También, por supuesto, supongamos que tenemos un Clúster Kafka 
 que tiene 100 GB de memoria RAM y con eso podemos atender, digamos, 100 procesos, porque cada proceso 
 consume de manera permanente 1 GB de RAM. ¿Qué pasa si queremos aumentar más procesos? pues el Clúster 
 ya está saturado, así que tocaría comprar más servidores y es como si dinámicamente creciese la memoria 
-RAM del Clúster y tenemos simplemente más RAM para colocar más procesos. Y por supuesto también es 
-altamente tolerante a fallos, vamos a explicar en un momento si cae un servidor y ese servidor tiene 
-datos en la memoria RAM, ¿los datos se pierden? no, porque Kafka también tiene redundancia sobre memoria 
-RAM, la data se va a escribir siempre en la RAM de 2 servidores diferentes, si uno colapsa tenemos la 
-copia en la RAM en otro servidor y por supuesto tú como desarrollador ya te despreocupas de todo eso, 
-pues simplemente creas tu componente de encolamiento sobre Kafka.
+RAM del Clúster y tenemos simplemente más RAM para colocar más procesos. 
+
+ _____________________________________________________________________________________________________     
+|                                                                                                     |
+|     Y por supuesto también es altamente tolerante a fallos, vamos a explicar en un momento si cae   | 
+|     un servidor y ese servidor tiene datos en la memoria RAM, ¿los datos se pierden? no, porque     |
+|     Kafka también tiene redundancia sobre memoria RAM, la data se va a escribir siempre en la RAM   |
+|     de 2 servidores diferentes, si uno colapsa tenemos la copia en la RAM en otro servidor y por    |
+|     supuesto tú como desarrollador ya te despreocupas de todo eso, pues simplemente creas tu        |
+|     componente de encolamiento sobre Kafka.                                                         |      
+|_____________________________________________________________________________________________________|
 
 
 Objetivo fundamental
@@ -94,12 +106,12 @@ de vida. Y el otro punto importante es por motivos de sizing.
 
 ¿Cómo se hace un sizing de la infraestructura Kafka? 
 
-no es tan completo y supongamos que tenemos 3 fuentes de datos en tiempo real, tenemos que escribir cada segundo 
-cuántas transacciones van a venir, digamos que desde la Fuente de datos 1 vienen 10000 transacciones por segundo, 
-de la fuente de datos 2 vienen 100000 transacciones por segundo y de la fuente de datos 3 vienen 1000 transacciones 
+No es tan complejo y supongamos que tenemos 3 fuentes de datos en tiempo real, tenemos que escribir cada segundo 
+cuántas transacciones van a venir, digamos que desde la Fuente de datos 1 vienen 10.000 transacciones por segundo, 
+de la fuente de datos 2 vienen 100.000 transacciones por segundo y de la fuente de datos 3 vienen 1.000 transacciones 
 por segundo. Lo siguiente es definir cuánto pesa en promedio cada una de estas transacciones y siempre van a ser 
 números pequeñitos, vamos a poner que todos pesan 1 KB para simplificar el cálculo, entonces este es el peso de las 
-transacciones. ¿Cuál es el peso total por segundo? para la fuente de datos 1 serían 10000 transacciones por segundo 
+transacciones. ¿Cuál es el peso total por segundo? para la fuente de datos 1 serían 10.000 transacciones por segundo 
 sobre 1 KB, que es 10 MB. De igual manera calculamos los demás.
 
       | n° transac. en  1s   | Peso Transaccion | Peso Total x seg. |  
@@ -111,9 +123,9 @@ ______|______________________|__________________|___________________|
 ______|______________________|__________________|___________________|
 
 Y, ¿cuál va a ser el tiempo y cuál va a ser la cantidad de RAM que se usarían para 1 hora? Para la fuente de datos 1, 
-si en cada segundo vienen 10 MB, en 1 hora sería 36000 MB o sea 36 GB. Para las demás fuentes de datos hacemos el mismo 
+si en cada segundo vienen 10 MB, en 1 hora sería 36.000 MB o sea 36 GB. Para las demás fuentes de datos hacemos el mismo 
 cálculo. De esta manera, ya tendremos números para poder decidir. La fuente de datos 1 va a requerir una reserva de 
-360 MB para poder almacenar la data por 1 hora, la fuente de datos 2 de 36 MB y la fuente de datos 3 de 3.6 MB cada hora. 
+36.000 MB para poder almacenar la data por 1 hora, la fuente de datos 2 de 360 GB y la fuente de datos 3 de 3.6 GB cada hora. 
 
       | n° transac. en  1s   | Peso Transaccion | Peso Total x seg. |      RAM x 1h      |  
 ______|______________________|__________________|___________________|____________________|

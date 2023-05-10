@@ -1,7 +1,7 @@
 RESUMEN Y EXPLICACION DEL ARCHIVO "producer-v3.0"
 =================================================
 
-Entonces la sesión del día de hoy el día de hoy vamos a utilizar las 2 herramientas que vivimos en la 
+Entonces la sesión del día de hoy el día de hoy vamos a utilizar las 2 herramientas que vimos en la 
 sesión anterior Kafka y HBase para completar todo un flujo end to end en tiempo real. Ahora, vamos a 
 tener que dar algunos detalles adicionales antes de empezar a implementar nuestra codificación por medio 
 de una Spark Streaming. ¿Cuál era el arquetipo de arquitectura que habíamos definido hasta el momento? 
@@ -17,7 +17,8 @@ infraestructura Kafka.
                                                                         Infraestructura           
                                                                             Kafka                
 
-¿Cómo vamos a mover desde la fuente de datos hacia el tópico Kafka? 
+¿Cómo vamos a mover desde la fuente de datos hacia el tópico Kafka?
+------------------------------------------------------------------- 
 
 Vamos a tener que implementar 2 piezas de software, una conocida como “Client Source”, ¿cuál es el 
 objetivo del Client Source? el objetivo de este Client Source es conectarse a la fuente de datos y extraer 
@@ -46,7 +47,8 @@ variable.
 Otro punto importante que tenemos que entender es que esto va a tener que estar sobre una capa de INGESTA 
 PARALELIZABLE, esto ya escapa de los temas de Big data. 
 
-¿A qué nos referimos con Ingesta Paralelizable? 
+¿A qué nos referimos con Ingesta Paralelizable?
+----------------------------------------------- 
 
 Vamos a poner algunos números para poder entenderlo. Si te das cuenta esta extracción y escritura de datos 
 hacia Kafka no es un proceso complejo, literalmente es un copiar y pegar datos desde fuente hasta Kafka, 
@@ -152,7 +154,7 @@ movimiento de datos, por lo tanto, estos componentes software pueden vivir como 
 espera hacer para ingestar fuentes de datos en entornos de Big data. La capa de ingesta paralelizable va a tener 
 micro-servicios en donde va a estar el código del Client Source y el Producer. Generalmente, es necesario solo 
 instanciar uno o 2 microservicios con la misma instancia del programa, porque, puede ser que por alguna razón 
-colapsen los componentes de software originales del Clinet Source y Producer, por diversas razones no necesariamente 
+colapsen los componentes de software originales del Client Source y Producer, por diversas razones no necesariamente 
 porque la tormenta datos incrementó, simplemente colapsó por alguna razón, tenemos otro componente que está 
 esperando peticiones o también podría pasar que de pronto vienen muchísimas más peticiones, así que también, otro 
 punto importante es que esta capa de micro-servicios (capa de ingesta paralelizable) en donde está nuestro Client 
@@ -187,7 +189,7 @@ se utiliza bastante también en IOT.
 
 Habíamos quedado en esto de la pandemia del coronavirus, todo el mundo en su casa y empezaron a comentar en Facebook en 
 gran cantidad y estamos en un escenario único, algo que nunca se esperó que pasase y de pronto la potencia necesaria para 
-poderatender todo eso se multiplicó por 100, uno podría decir: “…bueno estamos en Cloud así que no hay problema, si ahora 
+poder atender todo eso se multiplicó por 100, uno podría decir: “…bueno estamos en Cloud así que no hay problema, si ahora 
 necesitamos 100 veces más potencia, pues, la nube se dará cuenta de eso y levantará 100 instancias de nuestro servicio…” 
 esto es correcto, el problema ya escapa de la parte técnica aquí, aquí estaríamos entrando a un problema de presupuesto. 
 Recordemos que estas instancias no corren gratuitamente, cobran dinero, si dejamos que la elasticidad de la ingesta no 
@@ -296,7 +298,9 @@ el mayor tiempo posible en la extracción. El Consumer solamente tiene el objeti
 archivo, ahora este pequeño archivo de datos es pasado a una unidad de procesamiento y aquí es donde nosotros vamos a procesar 
 los registros de este archivo con todo lo que nosotros ya conocemos. 
 
-¿Cuál es el procesamiento que nosotros vamos a hacer para poner un ejemplo completo? 
+
+¿Cuál es el procesamiento que nosotros vamos a hacer para poner un ejemplo completo?
+------------------------------------------------------------------------------------ 
 
 Vamos a emular el envío de datos primero (Fuente de datos -> Client Source -> Producer -> Tópico). Luego, vamos a hacer un 
 cambio a diferentes fuentes de datos en tiempo real, para que vean cómo a nivel de código software esto se abstrae completamente 
@@ -304,7 +308,9 @@ de la fuente de datos. ¿Qué es lo que vamos a enviar? esta fuente de datos emu
 a enviar el ID de la persona que realiza una transacción, el ID de la empresa en donde se realizó la transacción y el monto de 
 la transacción. 
 
+
 ¿Qué es lo que vamos a hacer a nivel de procesamiento una vez recibidos los datos? 
+----------------------------------------------------------------------------------
 
 Vamos a escribir una función que va a aplicarse de manera paralelizable a todos los registros que hayan sido capturados en la 
 tormenta de datos, esa función de entrada, obviamente, va a tomar estos campos del registro y ¿qué es lo que va a hacer? el 

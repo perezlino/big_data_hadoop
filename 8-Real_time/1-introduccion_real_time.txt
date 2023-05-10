@@ -13,7 +13,7 @@ Storm Data? para poder entenderlo imaginemos una lluvia que puede estar cayendo 
 lluvia, obviamente, es pequeñísima no pasa nada, pero el problema es que en conjunto hay muchísimas de estas gotas 
 que cada segundo van a estar lloviendo por encima de la ciudad y, por lo tanto, puede haber una inundación, es 
 demasiada agua que está cayendo. El concepto de “Storm data” es muy similar a esto, vamos a tener peticiones que 
-pesan poquísimo, generalmente menos de un kilobyte, puede empezar megabyte, pero lo normal es menos de un kilobyte. 
+pesan poquísimo, generalmente menos de un kilobyte, puede ser un megabyte, pero lo normal es menos de un kilobyte. 
 Pero no vamos a tener una de estas peticiones, si no, que vamos a tener cientos de miles de peticiones por segundo, 
 el ejemplo que todos podemos entender los comentarios sobre Facebook. En Facebook, obviamente, las personas van a 
 estar comentando, cada comentario si copiásemos el contenido y guardaramos en un archivo y verificamos el peso sería 
@@ -109,7 +109,7 @@ batchero pequeñito.
 Esta es la gran ventaja del MICRO-BATCH: 
 
 1.- Ya no vamos a colapsar la infraestructura
-2.- Vamos a poder seguir aplicando todas las técnicas de programación basadas  en BATCH. 
+2.- Vamos a poder seguir aplicando todas las técnicas de programación basadas en BATCH. 
 
 Obviamente hay que seguir unos lineamientos, pero van a ver que en esencia este es el truco y una vez que lo tengas como un 
 pequeño archivito, ya lo vas a procesar como siempre lo has estado procesando. El otro punto es que esto también pasa 
@@ -176,13 +176,20 @@ registro, dime cuál es el nombre. Para el primer registro tengo el ID de la emp
 nombre…”. Vamos a hacer una consulta y esta consulta va a ser en tiempo real. HIVE no es una herramienta para procesamientos 
 REAL-TIME, así que vamos a tener que usar otro tipo de herramienta que nos va a permitir hacer consultas en tiempo real. Digamos 
 que al vuelo se consulta para todos los registros, y esta consulta generalmente dura menos de un segundo y luego hacemos algo con 
-los datos, ese algo podría ser en una tabla guardar la transacción enriquecida con los campos que hemos agregado. Una vez que 
-hemos guardado los datos en una tablita, nosotros podemos tener una herramienta de visualización que cada segundo va actualizando 
-la data en tiempo real en función de lo que se va guardando en esta tablita resultante de nuestro proceso, de esa manera 
-estaríamos haciendo un end to end completo, de un procesamiento en tiempo real. Un componente de encolamiento que soporta la 
-data por 1 segundo, un consumer que se encarga de extraer esos datos y colocarlos en un archivito, un módulo de procesamiento 
-que hace algo con esta data, ese algo con esta data puede ser vamos a enriquecer en tiempo real con más campos los registros que 
-vamos capturando, procesamos lo que tengamos que procesar y la resultante la guardamos en una tabla también en tiempo real. 
+los datos, ese algo podría ser en una tabla guardar la transacción enriquecida con los campos que hemos agregado. 
+
+ _____________________________________________________________________________________________________________________________
+|                                                                                                                             |
+|  Una vez que hemos guardado los datos en una tablita, nosotros podemos tener una herramienta de visualización que cada      |
+|  segundo va actualizando la data en tiempo real en función de lo que se va guardando en esta tablita resultante de nuestro  | 
+|  proceso, de esa manera estaríamos haciendo un end to end completo, de un procesamiento en tiempo real. Un componente de    |
+|  encolamiento que soporta la data por 1 segundo, un consumer que se encarga de extraer esos datos y colocarlos en un        |
+|  archivito, un módulo de procesamiento que hace algo con esta data, ese algo con esta data puede ser vamos a enriquecer en  |
+|  tiempo real con más campos los registros que vamos capturando, procesamos lo que tengamos que procesar y la resultante la  |
+|  guardamos en una tabla también en tiempo real.                                                                             |    
+|_____________________________________________________________________________________________________________________________|
+
+
 Generalmente los tiempos son 1 segundo para capturar, 1 segundo para hacer todo este flujo, desde la creación del pequeño archivito 
 hasta la consulta en tiempo real la base de datos y enriquecimiento de registros y 1 segundo adicional para bajar la data 
 resultante, no se pues, los 100000 registros que hemos procesado al Disco duro y luego ya con tu herramienta de visualización de 
@@ -222,14 +229,21 @@ entender cómo implementar el patrón con al menos algunas herramientas. Si pued
 ver el día de hoy, si mañana en lugar de Azure quieres usar Cassandra, el patrón es el mismo, los comandos serán diferentes, pero 
 lo que importa es ver cómo implementar este patrón. Vamos a poner un nombre sobre toda esta arquitectura visual. La fuente de 
 datos la vamos a emular en tiempo real y luego vamos a hacer un switch a una fuente de datos ya realmente de tiempo real, así que 
-por ahora no va a importar tanto esa fuente. Esta infraestructura que va a capturar la data, que nos va a permitir crear una cola 
-de peticiones en memoria RAM se llama KAFKA. Es una herramienta de encolamiento de datos para tiempo real. ¿Existen otras 
-alternativas? Claro, por ejemplo, si estuviéramos en nube, AZURE tiene EVENT HUB, hay muchísimas otras herramientas, pero KAFKA es 
-la estándar. De hecho, las herramientas en cloud que también te permiten hacer encolamientos, te ofrecen la interfaz KAFKA por si 
-quieres usarla, pero con los mismos comandos de Kafka, por lo tanto, vas a poder manejar muchas herramientas. Bien, ya tenemos la 
-herramienta con que encolar, ya sabemos que Kafka va a tener que estar en una infraestructura dedicada, no puede estar en la misma 
-infraestructura del Clúster de procesamiento. Recordemos que vamos a estar separando memoria RAM. Supongamos que tenemos varias 
-fuentes de datos en tiempo real, tendremos que separar una zona de memoria RAM para cada fuente de datos y ya sabemos que los 
+por ahora no va a importar tanto esa fuente. 
+
+ _______________________________________________________________________________________________________________________
+|                                                                                                                       |
+|  Esta infraestructura que va a capturar la data, que nos va a permitir crear una cola de peticiones en memoria RAM se | 
+|  llama KAFKA. Es una herramienta de encolamiento de datos para tiempo real.                                           |
+|_______________________________________________________________________________________________________________________|
+
+
+¿Existen otras alternativas? Claro, por ejemplo, si estuviéramos en nube, AZURE tiene EVENT HUB, hay muchísimas otras herramientas, 
+pero KAFKA es la estándar. De hecho, las herramientas en cloud que también te permiten hacer encolamientos, te ofrecen la interfaz 
+KAFKA por si quieres usarla, pero con los mismos comandos de Kafka, por lo tanto, vas a poder manejar muchas herramientas. Bien, ya 
+tenemos la herramienta con que encolar, ya sabemos que Kafka va a tener que estar en una infraestructura dedicada, no puede estar en 
+la misma infraestructura del Clúster de procesamiento. Recordemos que vamos a estar separando memoria RAM. Supongamos que tenemos 
+varias fuentes de datos en tiempo real, tendremos que separar una zona de memoria RAM para cada fuente de datos y ya sabemos que los 
 procesos en tiempo real son permanentes, ¿esto qué significa? por ejemplo, un comentario en Facebook lo puedes hacer a la 1:00 de 
 la tarde o a la 1:00 de la mañana, no es que Facebook te dice: “…vamos a habilitar los comentarios de tal hora hasta tal hora…”, 
 no, es algo permanente, así que esta zona de memoria RAM, va a estar ocupada de manera permanente, durante el tiempo que 

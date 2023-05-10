@@ -117,7 +117,7 @@ Funcionamiento de un server para un proceso micro-batch
 
 Entonces, gracias al patrón de procesamiento MICRO-BATCH, vamos a tener un componente que nos va a ordenar los datos, que va a 
 entregar un archivito y tú ya puedes paralelizar ese archivito como si fuera un procesamiento de tiempo real y por supuesto que 
-este componente de encolamiento como va a estar soportando el STORM DATA, no va a tener 1 hora de inicio y fin bien definida, va 
+este componente de encolamiento como va a estar soportando el STORM DATA, no va a tener una hora de inicio y fin bien definida, va 
 a estar permanentemente abierto, ¿qué significa permanentemente abierto? recordemos que la captura de los datos, para la parte de 
 la infraestructura que realizará el encolamiento, la vamos a hacer en la memoria RAM. Supongamos que cada segundo se capturan 
 100 MB de datos, eso significa que en la memoria RAM de la infraestructura de encolamiento, de manera permanente va a estar 
@@ -156,7 +156,7 @@ es que ya no vamos a tener un hilo de procesamiento o 10, si estamos paralelizan
 hilos de procesamiento que entre cada capa de la arquitectura, van a estar compitiendo por uso de recursos computacionales. Por 
 ejemplo, si apuntamos directamente al Clúster para ingestar la data, vamos a tener el primer problema: 
 
-1.- Múltiples conexiones simultáneas, nuestra red de ethernet probablemente va a colapsar, porque, una cosa es tener una una 
+1.- Múltiples conexiones simultáneas, nuestra red de ethernet probablemente va a colapsar, porque, una cosa es tener una 
     petición de conexión de un archivo muy grande y otra cosa es tener cientos de miles de usuarios que se están conectando de 
     manera concurrente con una petición pequeñita, se manejan de una manera diferente, probablemente lo primero en colapsar va a 
     ser la red del Clúster. Supongamos que pasa toda la data que hemos ingestado, probablemente lo que va a colapsar ahora es tu 
@@ -179,7 +179,7 @@ Arquitectura base para un proceso micro-batch como Real Time
 ------------------------------------------------------------
 
 Así que en un mundo empresarial, este es el patrón ya formal que se va a seguir, el de MICRO-BATCH. ¿En qué consiste este patrón? 
-lo hemos explicado anteriormente de manera muy general, ahora sí vamos si vamos a dar un detalle más profundo. 
+lo hemos explicado anteriormente de manera muy general, ahora sí vamos a dar un detalle más profundo. 
 
 Tenemos una SOURCE (fuente de datos), hablemos de Facebook que todos conocemos. Se habia dicho que el primer paso es capturar esa 
 tormenta de datos, aquí, en el componente de encolamiento. Pero no es que los datos de Facebook se vayan a mover a tu componente 
